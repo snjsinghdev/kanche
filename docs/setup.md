@@ -28,6 +28,10 @@ pnpm harness       # cross-engine determinism: Node, Deno, Chromium, WebKit, Fir
 
 The install refuses any dependency version published less than 7 days ago (`minimumReleaseAge`), and runs install scripts only for packages listed under `allowBuilds` (esbuild). pnpm also lists "agent skills awaiting approval" for `pixi.js`. They're left unapproved; nothing in the build needs them.
 
+### Optional: the KPB 14 reference script
+
+`tools/kpb/reference/pooltool_mathavan.py` regenerates the pooltool reference values. It needs `python3` with numpy, and the pooltool 0.6.0 wheel if you want `--wheel` to check the vendored source. It is never part of `pnpm verify` or CI, because its output is committed (ADR-0007).
+
 ### WebKit on Ubuntu without sudo
 
 Playwright's WebKit needs `libavif16`, which isn't installed by default. With sudo, run `sudo pnpm exec playwright install-deps webkit`. Without sudo, put the libraries into WebKit's own bundled library folder:
