@@ -13,7 +13,10 @@ import { CSV_HEADER, parseScenario, runLab, scenarioParams, type Scenario } from
 const SCENARIOS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scenarios');
 const readJson = (file: string): unknown => JSON.parse(readFileSync(file, 'utf8'));
 const load = (name: string): Scenario => parseScenario(readJson(path.join(SCENARIOS, name)));
-const shots = readdirSync(SCENARIOS).filter((f) => f !== 'stickier-cement.json');
+// Shot scenarios only: not the parameter overrides, nor any output folder `pnpm lab` left here.
+const shots = readdirSync(SCENARIOS).filter(
+  (f) => f.endsWith('.json') && f !== 'stickier-cement.json',
+);
 
 describe('the sample scenarios', () => {
   it.each(shots)('%s runs, closes its ledger and lays out every keyframe', (name) => {
@@ -98,7 +101,10 @@ describe('the CLI', () => {
     expect(events.hash).not.toBe(plain.result.hash);
   });
 
-  it('prints its usage without a scenario', () => {
+  it('prints its usage without a scenario, and refuses a flag without its value', () => {
     expect(main([])).toBe(2);
+    const scenario = path.join(SCENARIOS, 'roll-out.json');
+    expect(() => main([scenario, '--out'])).toThrow(/--out needs a value/);
+    expect(() => main([scenario, '--params', '--out', dir])).toThrow(/--params needs a value/);
   });
 });

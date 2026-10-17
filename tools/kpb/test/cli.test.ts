@@ -58,7 +58,48 @@ describe('the KPB CLI', () => {
     expect(fitted.surfaces.tile.muR).toBeGreaterThan(0.006);
     expect(main(['score', file, '--params', overrides, '--strict'])).toBe(0);
     expect(main(['score', file, '--strict'])).toBe(1);
+    // A switch never swallows the argument after it.
+    expect(main(['score', '--strict', file])).toBe(1);
   }, 120_000);
+
+  it('refuses bad import arguments before reading anything', () => {
+    const base = ['import', '--dataset', path.join(dir, 'x.json'), '--id', 'a', '--condition', 'c'];
+    const rest = ['--shooter', '1:r80:none.csv'];
+    const run = (extra: string[]) => () => main([...base, ...extra, ...rest]);
+    expect(run(['--kind', 'roll', '--surface', 'ice', '--launch', 'rolling'])).toThrow(/--surface/);
+    expect(run(['--kind', 'jump', '--surface', 'tile', '--launch', 'rolling'])).toThrow(/--kind/);
+    expect(run(['--kind', 'roll', '--surface', 'tile', '--launch', 'thrown'])).toThrow(/--launch/);
+    expect(
+      run(['--kind', 'roll', '--surface', 'tile', '--launch', 'rolling', '--unit', 'ft']),
+    ).toThrow(/--unit/);
+    expect(() => main(['import', '--dataset'])).toThrow(/needs a value/);
+    expect(() =>
+      main([
+        ...base,
+        '--kind',
+        'roll',
+        '--surface',
+        'tile',
+        '--launch',
+        'rolling',
+        '--shooter',
+        'x:r80:a.csv',
+      ]),
+    ).toThrow(/a marble is/);
+    expect(() =>
+      main([
+        ...base,
+        '--kind',
+        'roll',
+        '--surface',
+        'tile',
+        '--launch',
+        'rolling',
+        '--shooter',
+        '1:r70:a.csv',
+      ]),
+    ).toThrow(/marble size/);
+  });
 
   it('writes the synthetic dataset and prints usage for anything else', () => {
     const out = path.join(dir, 'synthetic.json');

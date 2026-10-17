@@ -7,7 +7,10 @@
  * KPB's reality gate stays open until real footage replaces it (docs/kpb.md).
  *
  * Reproducible: randomness is the seeded createRng, and the noise is Irwin–Hall (a sum of twelve
- * uniforms), so the file does not depend on any engine's Math.log or Math.cos.
+ * uniforms) rather than Box–Muller's log and cos. The launch directions do use Math.cos and
+ * Math.sin, which engines may round differently, so the file is regenerated (and compared, in
+ * test/kpb.test.ts) under the repository's pinned Node; positions are kept to 0.1 mm, so a
+ * last-bit difference in a launch would rarely reach the file.
  */
 import {
   createRng,
@@ -36,6 +39,7 @@ export const SYNTHETIC_TRUTH: ParamOverrides = {
     dirt: { muS: 0.42, muR: 0.028 },
   },
   glass: { e: { x: [0.3, 2.5], y: [0.95, 0.89] }, mu: 0.065 },
+  edge: { e: 0.4, mu: 0.25 },
   flick: { fingerMass: 0.0055, fingerRestitution: 0.55 },
 };
 

@@ -17,7 +17,10 @@ import { parseScenario, runLab } from './lab.ts';
 export function main(argv: readonly string[]): number {
   const option = (name: string): string | undefined => {
     const at = argv.indexOf(name);
-    return at >= 0 ? argv[at + 1] : undefined;
+    if (at < 0) return undefined;
+    const value = argv[at + 1];
+    if (value === undefined || value.startsWith('--')) throw new Error(`${name} needs a value`);
+    return value;
   };
   const file = argv.find(
     (a, i) => !a.startsWith('--') && !(argv[i - 1]?.startsWith('--') ?? false),

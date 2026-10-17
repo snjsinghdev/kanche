@@ -6,9 +6,11 @@
  * 2. muS (per surface), from stunned launches;
  * 3. e(v), glass on glass, from head-on hits, as a table over the hits' approach speeds, and
  * 4. muBB, glass on glass, from cut shots (their throw), fitted together;
- * 5. the finger mass mF and restitution eF, from central flicks.
+ * 5. the rim model, from hole approaches: the restitution and friction of impacts on the rim,
+ *    which is the edge material pair (so steps and curbs share it);
+ * 6. the finger mass mF and restitution eF, from central flicks.
  *
- * Fits 1–4 use the simulation itself as the model: the recordings are replayed with candidate
+ * Fits 1–5 use the simulation itself as the model: the recordings are replayed with candidate
  * coefficients and the simulated tracks compared with the filmed ones frame by frame, each
  * recording fitting its own launch speed (and direction, where it matters) as a nuisance
  * parameter. Fit 5 is closed form: a central flick launches at v0 = (1 + eF)·vF·mF/(mF + m).
@@ -21,7 +23,7 @@ import {
   type SurfaceId,
 } from '@kanche/physics';
 
-import { trackOf, type Dataset, type Recording } from './dataset.ts';
+import { DatasetError, trackOf, type Dataset, type Recording } from './dataset.ts';
 import { fitBlocks, type Block } from './lm.ts';
 import { impactTime } from './metrics.ts';
 import { simulateRecording, stateAt, times } from './track.ts';
@@ -110,7 +112,28 @@ function distanceResiduals(rec: Recording, params: PhysicsParams, speed: number,
   return out;
 }
 
-/** Residuals in both coordinates of every tracked marble, around the impact (m). */
+/** Residuals in both coordinates of every tracked marble, between two times (m). */
+function positionResiduals(
+  rec: Recording,
+  params: PhysicsParams,
+  speed: number,
+  angle: number,
+  from: number,
+  to: number,
+): number[] {
+  const sim = simulateRecording(rec, params, { speed, angle });
+  const out: number[] = [];
+  for (const real of rec.tracks) {
+    const s = trackOf({ ...rec, tracks: sim.tracks }, real.id);
+    times(real, rec.fps).forEach((t, k) => {
+      if (t < from || t > to) return;
+      out.push((s.x[k] ?? NaN) - (real.x[k] ?? NaN), (s.y[k] ?? NaN) - (real.y[k] ?? NaN));
+    });
+  }
+  return out;
+}
+
+/** The same, around an impact. */
 function impactResiduals(
   rec: Recording,
   at: number,
@@ -118,16 +141,14 @@ function impactResiduals(
   speed: number,
   angle: number,
 ): number[] {
-  const sim = simulateRecording(rec, params, { speed, angle });
-  const out: number[] = [];
-  for (const real of rec.tracks) {
-    const s = trackOf({ ...rec, tracks: sim.tracks }, real.id);
-    times(real, rec.fps).forEach((t, k) => {
-      if (t < at - IMPACT_FIT_BEFORE || t > at + IMPACT_FIT_AFTER) return;
-      out.push((s.x[k] ?? NaN) - (real.x[k] ?? NaN), (s.y[k] ?? NaN) - (real.y[k] ?? NaN));
-    });
-  }
-  return out;
+  return positionResiduals(
+    rec,
+    params,
+    speed,
+    angle,
+    at - IMPACT_FIT_BEFORE,
+    at + IMPACT_FIT_AFTER,
+  );
 }
 
 function surfacesOf(recs: readonly Recording[]): SurfaceId[] {
@@ -293,7 +314,78 @@ export function fitImpacts(d: Dataset, base: PhysicsParams): Calibration {
   };
 }
 
-/** 5. mF and eF from central flicks: vF/v0 = 1/(1 + eF) + m/((1 + eF)·mF), linear in m. */
+/** How long after reaching the hole a rim fit follows a marble (s): past the first rim contacts,
+ * a lip-out's later bounces turn chaotic and would make the fit's landscape rugged. */
+const RIM_WINDOW = 0.15;
+
+/** When a filmed marble first comes within reach of the hole's rim (s), or Infinity. */
+function reachesHole(rec: Recording): number {
+  const hole = rec.court.hole;
+  const t = trackOf(rec, rec.shooter);
+  const size = rec.marbles.find((m) => m.id === rec.shooter)?.size ?? 'r80';
+  if (hole === undefined) return Infinity;
+  const reach = hole.radius + hole.rimRadius + PARAMS_V1.radius[size];
+  const k = t.x.findIndex((x, i) => Math.hypot(x - hole.x, (t.y[i] ?? NaN) - hole.y) < reach);
+  return k < 0 ? Infinity : t.t0 + k / rec.fps;
+}
+
+/**
+ * 5. The rim model, from hole approaches: the edge pair's restitution and friction, which govern
+ * a marble striking the rim. Residuals are the marble's positions from its launch until
+ * RIM_WINDOW after it reaches the hole; each recording fits its launch. Recordings that never
+ * reach the hole carry no information about the rim and are left out.
+ */
+export function fitRim(d: Dataset, base: PhysicsParams): Calibration {
+  const recs = of(d, 'hole').filter((r) => Number.isFinite(reachesHole(r)));
+  const paramsFor = (shared: readonly number[]): PhysicsParams =>
+    deriveParams(base, { edge: { e: Math.min(1, shared[0] ?? NaN), mu: shared[1] ?? NaN } });
+  const blocks: Block[] = recs.map((rec) => {
+    const until = reachesHole(rec) + RIM_WINDOW;
+    return {
+      local: [speedOf(rec), angleOf(rec)],
+      residuals: (shared, local) =>
+        positionResiduals(
+          rec,
+          paramsFor(shared),
+          local[0] ?? NaN,
+          local[1] ?? NaN,
+          -Infinity,
+          until,
+        ),
+    };
+  });
+  // Lip-outs make the landscape rugged, so the fit starts from the base and from 20% either side
+  // and keeps the best. Its error bars are not reliable (docs/kpb.md).
+  const e0 = base.edge.e.data.y[0] ?? 0.5;
+  const mu0 = base.edge.mu.data.y[0] ?? 0.3;
+  const bounds = { lower: [0, 0], upper: [1, Infinity] };
+  let fit = fitBlocks([e0, mu0], blocks, bounds);
+  for (const k of [0.8, 1.2]) {
+    const next = fitBlocks([Math.min(1, e0 * k), mu0 * k], blocks, bounds);
+    if (next.sigma < fit.sigma) fit = next;
+  }
+  return {
+    estimates: [
+      {
+        name: 'edge.e',
+        value: fit.shared[0] ?? NaN,
+        sigma: fit.sharedSigma[0] ?? NaN,
+        unit: '–',
+        n: recs.length,
+      },
+      {
+        name: 'edge.mu',
+        value: fit.shared[1] ?? NaN,
+        sigma: fit.sharedSigma[1] ?? NaN,
+        unit: '–',
+        n: recs.length,
+      },
+    ],
+    overrides: { edge: { e: fit.shared[0] ?? NaN, mu: fit.shared[1] ?? NaN } },
+  };
+}
+
+/** 6. mF and eF from central flicks: vF/v0 = 1/(1 + eF) + m/((1 + eF)·mF), linear in m. */
 export function fitFlick(d: Dataset, base: PhysicsParams): Calibration {
   const recs = of(d, 'flick');
   const xs: number[] = [];
@@ -305,6 +397,11 @@ export function fitFlick(d: Dataset, base: PhysicsParams): Calibration {
     ys.push((r.fingerSpeed ?? NaN) / speedOf(r));
   }
   const n = xs.length;
+  // The regression needs flicks of at least two marble sizes (the mass is the regressor) and a
+  // spare point for the error: anything less cannot separate mF from eF.
+  if (n < 3 || new Set(xs).size < 2) {
+    throw new DatasetError('fitFlick needs at least three flicks of at least two marble sizes');
+  }
   const mx = xs.reduce((a, b) => a + b, 0) / n;
   const my = ys.reduce((a, b) => a + b, 0) / n;
   const sxx = xs.reduce((a, x) => a + (x - mx) * (x - mx), 0);
@@ -340,6 +437,7 @@ function merge(a: ParamOverrides, b: ParamOverrides): ParamOverrides {
     ...b,
     surfaces,
     glass: { ...a.glass, ...b.glass },
+    edge: { ...a.edge, ...b.edge },
     flick: { ...a.flick, ...b.flick },
   };
 }
@@ -352,6 +450,7 @@ export function calibrate(d: Dataset, base: PhysicsParams = PARAMS_V1): Calibrat
     [['roll'], fitRolling],
     [['stun'], fitSliding],
     [['head-on', 'cut'], fitImpacts],
+    [['hole'], fitRim],
     [['flick'], fitFlick],
   ] as const;
   for (const [kinds, fit] of steps) {

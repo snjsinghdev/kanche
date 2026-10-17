@@ -14,13 +14,13 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   deriveParams,
   PARAMS_V1,
+  SIZE_CLASSES,
+  SURFACES,
   type CourtSpec,
   type ParamOverrides,
-  type SizeClass,
-  type SurfaceId,
 } from '@kanche/physics';
 
-import { DATASET_SCHEMA, validateDataset, type Dataset, type RecordingKind } from './dataset.ts';
+import { DATASET_SCHEMA, RECORDING_KINDS, validateDataset, type Dataset } from './dataset.ts';
 import { calibrate } from './fit.ts';
 import { scoreDataset } from './score.ts';
 import { makeSynthetic } from './synthetic.ts';
@@ -41,22 +41,35 @@ export function formatDataset(d: Dataset): string {
   return `${top},\n  "recordings": [\n${rows}\n  ]\n}\n`;
 }
 
+/** Flags that take no value: they never swallow the argument after them. */
+const SWITCHES = new Set(['--strict']);
+
 function options(argv: readonly string[]): { args: string[]; opts: Map<string, string[]> } {
   const args: string[] = [];
   const opts = new Map<string, string[]>();
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i] ?? '';
-    if (a.startsWith('--')) {
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--'))
-        opts.set(a, [...(opts.get(a) ?? []), 'true']);
-      else {
-        opts.set(a, [...(opts.get(a) ?? []), next]);
-        i += 1;
-      }
-    } else args.push(a);
+    if (!a.startsWith('--')) {
+      args.push(a);
+      continue;
+    }
+    if (SWITCHES.has(a)) {
+      opts.set(a, ['true']);
+      continue;
+    }
+    const next = argv[i + 1];
+    if (next === undefined || next.startsWith('--')) throw new Error(`${a} needs a value`);
+    opts.set(a, [...(opts.get(a) ?? []), next]);
+    i += 1;
   }
   return { args, opts };
+}
+
+function choice<T extends string>(name: string, value: string, allowed: readonly T[]): T {
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw new Error(`${name} must be one of ${allowed.join(', ')}, got "${value}"`);
+  }
+  return value as T;
 }
 
 function one(opts: Map<string, string[]>, name: string): string {
@@ -65,22 +78,46 @@ function one(opts: Map<string, string[]>, name: string): string {
   return v;
 }
 
-function marble(spec: string, unit: LengthUnit): TrackedMarble {
+interface MarbleSpec {
+  readonly id: number;
+  readonly size: (typeof SIZE_CLASSES)[number];
+  readonly file: string;
+}
+
+function marbleSpec(spec: string): MarbleSpec {
   const [id, size, ...file] = spec.split(':');
+  const n = Number(id);
+  if (!Number.isInteger(n) || n < 0 || file.length === 0) {
+    throw new Error(`a marble is <id>:<size>:<tracker.csv>, got "${spec}"`);
+  }
+  return { id: n, size: choice('a marble size', size ?? '', SIZE_CLASSES), file: file.join(':') };
+}
+
+function marble(spec: MarbleSpec, unit: LengthUnit): TrackedMarble {
   return {
-    id: Number(id),
-    size: size as SizeClass,
-    track: parseTrackerCsv(readFileSync(file.join(':'), 'utf8'), unit),
+    id: spec.id,
+    size: spec.size,
+    track: parseTrackerCsv(readFileSync(spec.file, 'utf8'), unit),
   };
 }
 
 function importCommand(opts: Map<string, string[]>): number {
+  // Every argument is checked before any file is read.
   const file = one(opts, '--dataset');
-  const unit = (opts.get('--unit')?.[0] ?? 'm') as LengthUnit;
-  const shooter = marble(one(opts, '--shooter'), unit);
-  const others = (opts.get('--marble') ?? []).map((m) => marble(m, unit));
-  const surface = one(opts, '--surface') as SurfaceId;
+  const id = one(opts, '--id');
+  const condition = one(opts, '--condition');
+  const kind = choice('--kind', one(opts, '--kind'), RECORDING_KINDS);
+  const surface = choice('--surface', one(opts, '--surface'), SURFACES);
+  const launch = choice('--launch', one(opts, '--launch'), ['rolling', 'stun'] as const);
+  const unit = choice('--unit', opts.get('--unit')?.[0] ?? 'm', ['m', 'cm', 'mm'] as const);
+  const finger = opts.get('--finger-speed')?.[0];
+  const fingerSpeed = finger === undefined ? undefined : positive('--finger-speed', finger);
+  const shooterSpec = marbleSpec(one(opts, '--shooter'));
+  const otherSpecs = (opts.get('--marble') ?? []).map(marbleSpec);
   const courtFile = opts.get('--court')?.[0];
+
+  const shooter = marble(shooterSpec, unit);
+  const others = otherSpecs.map((m) => marble(m, unit));
   // Without a court, open ground of the surface around everything tracked, 1 m each way.
   const xs = [shooter, ...others].flatMap((m) => m.track.x);
   const ys = [shooter, ...others].flatMap((m) => m.track.y);
@@ -96,16 +133,15 @@ function importCommand(opts: Map<string, string[]>): number {
           },
         }
       : (readJson(courtFile) as CourtSpec);
-  const finger = opts.get('--finger-speed')?.[0];
   const rec = recordingFromTracks({
-    id: one(opts, '--id'),
-    condition: one(opts, '--condition'),
-    kind: one(opts, '--kind') as RecordingKind,
+    id,
+    condition,
+    kind,
     court,
-    launch: one(opts, '--launch') as 'rolling' | 'stun',
+    launch,
     shooter,
     others,
-    ...(finger === undefined ? {} : { fingerSpeed: Number(finger) }),
+    ...(fingerSpeed === undefined ? {} : { fingerSpeed }),
   });
   const base: Dataset = existsSync(file)
     ? validateDataset(readJson(file))
@@ -121,6 +157,12 @@ function importCommand(opts: Map<string, string[]>): number {
   writeFileSync(file, formatDataset(next));
   console.log(`added ${rec.id} (${rec.kind}, ${String(rec.tracks.length)} tracks) to ${file}`);
   return 0;
+}
+
+function positive(name: string, value: string): number {
+  const n = Number(value);
+  if (!(Number.isFinite(n) && n > 0)) throw new Error(`${name} must be a positive number`);
+  return n;
 }
 
 export function main(argv: readonly string[]): number {
