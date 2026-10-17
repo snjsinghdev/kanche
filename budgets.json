@@ -1,5 +1,5 @@
 {
-  "$comment": "Budgets are tests (CLAUDE.md). Raising one needs an ADR. Bytes throughout. initialJsGzipBytes is set from the Phase 0 measurement plus headroom (docs/handoff/phase-00.md); art and audio leave room inside the 30 MB Android download target.",
+  "$comment": "Budgets are tests (CLAUDE.md). Raising one needs an ADR. Bytes, except frames (ms). initialJsGzipBytes is set from the Phase 0 measurement plus headroom (docs/handoff/phase-00.md); art and audio leave room inside the 30 MB Android download target. Frame budgets per device tier come from the Kanche Visual Benchmark v1 (ADR-0002): on the reference budget phone at least 95% of frames within 16.7 ms and none over 50 ms during a shot; on mid-range at least 99% and none over 33 ms. They are checked against device frame reports (pnpm budgets --frames), which Phase 3 starts producing.",
   "web": {
     "initialJsGzipBytes": 170000
   },
@@ -9,5 +9,17 @@
   },
   "android": {
     "downloadBytes": 31457280
+  },
+  "frames": {
+    "reference": {
+      "percentile": 95,
+      "frameMs": 16.7,
+      "maxShotFrameMs": 50
+    },
+    "midRange": {
+      "percentile": 99,
+      "frameMs": 16.7,
+      "maxShotFrameMs": 33
+    }
   }
 }

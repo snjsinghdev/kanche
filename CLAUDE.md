@@ -13,6 +13,9 @@ The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prom
 - Budgets are tests.
 - Child mode limits data, stakes and notifications.
 - Every decision gets an ADR; every phase ends with a handoff note and a CodeRabbit-reviewed PR.
+- No phase starts until the previous phase's exit gates in `docs/gates.md` have passed. A failed gate means fixing the problem or cutting scope, never pushing on.
+- Nothing money can buy, directly or through the unlock, can ever be staked (Gate 3).
+- Visual quality is measured, not argued: every visual change passes the Kanche Visual Benchmark checks that apply to it (`docs/kvb.md`, created in Phase 3).
 
 **The determinism lint** (`tools/eslint-plugin-kanche`, ADR-0004) covers `packages/{physics,rules,ai}/src` and `packages/marble-gen/src/genome`.
 
@@ -23,21 +26,21 @@ The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prom
 
 ## Repository map
 
-| Path                         | What                                                                                      | Rules                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------- |
-| `packages/physics`           | Deterministic simulation core, seeded RNG, state hash                                     | `packages/physics/CLAUDE.md`       |
-| `packages/rules`             | Ring, Hit and Hole; turns, the lag, stakes                                                | `packages/rules/CLAUDE.md`         |
-| `packages/ai`                | The neighbourhood kids (physics-search AI)                                                | `packages/ai/CLAUDE.md`            |
-| `packages/marble-gen`        | Marble genomes (`src/genome` is simulation code)                                          | determinism lint on `src/genome`   |
-| `packages/protocol`          | Wire formats: shot inputs, challenges, claims                                             | platform-free                      |
-| `packages/content`           | Courts, marble series and events as data                                                  | platform-free                      |
-| `packages/testkit`           | Vitest preset and test helpers                                                            | imports no other `@kanche` package |
-| `apps/client`                | Vite + PixiJS app, Capacitor `android/` and `ios/`                                        | `apps/client/CLAUDE.md`            |
-| `supabase`                   | Migrations, Edge Functions (Deno), DB tests                                               | `supabase/CLAUDE.md`               |
-| `tools/eslint-plugin-kanche` | The determinism lint and its tests                                                        |                                    |
-| `tools/determinism`          | Cross-engine harness (Node, Deno, Chromium, WebKit, Firefox)                              |                                    |
-| `tools/budgets`              | Budget checker for `budgets.json`                                                         |                                    |
-| `docs`                       | `ARCHITECTURE.md`, `qualities.md`, `setup.md`, `adr/`, `phases/`, `handoff/`, `evidence/` |                                    |
+| Path                         | What                                                                                                            | Rules                              |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `packages/physics`           | Deterministic simulation core, seeded RNG, state hash                                                           | `packages/physics/CLAUDE.md`       |
+| `packages/rules`             | Ring, Hit and Hole; turns, the lag, stakes                                                                      | `packages/rules/CLAUDE.md`         |
+| `packages/ai`                | The neighbourhood kids (physics-search AI)                                                                      | `packages/ai/CLAUDE.md`            |
+| `packages/marble-gen`        | Marble genomes (`src/genome` is simulation code)                                                                | determinism lint on `src/genome`   |
+| `packages/protocol`          | Wire formats: shot inputs, challenges, claims                                                                   | platform-free                      |
+| `packages/content`           | Courts, marble series and events as data                                                                        | platform-free                      |
+| `packages/testkit`           | Vitest preset and test helpers                                                                                  | imports no other `@kanche` package |
+| `apps/client`                | Vite + PixiJS app, Capacitor `android/` and `ios/`                                                              | `apps/client/CLAUDE.md`            |
+| `supabase`                   | Migrations, Edge Functions (Deno), DB tests                                                                     | `supabase/CLAUDE.md`               |
+| `tools/eslint-plugin-kanche` | The determinism lint and its tests                                                                              |                                    |
+| `tools/determinism`          | Cross-engine harness (Node, Deno, Chromium, WebKit, Firefox)                                                    |                                    |
+| `tools/budgets`              | Budget checker for `budgets.json`, including frame times per device tier                                        |                                    |
+| `docs`                       | `ARCHITECTURE.md`, `qualities.md`, `setup.md`, `gates.md`, `legal/`, `adr/`, `phases/`, `handoff/`, `evidence/` |                                    |
 
 The package dependency direction is `physics ← rules ← ai`, with `protocol` allowed to import `physics` and `rules`. No core package imports DOM, Node built-ins, PixiJS, Capacitor, Supabase or app code. Each core package's `tsconfig.lib.json` has no DOM or Node types, so a violation is a type error as well as a lint error.
 
@@ -62,11 +65,11 @@ Set up the machine with `docs/setup.md` first (Node 24.22.0, pnpm via corepack, 
 
 ## Workflow
 
-1. **Start in plan mode.** Read this file, the relevant directory CLAUDE.md files, `docs/ARCHITECTURE.md`, the ADRs and the last handoff note. Write the plan to `docs/phases/phase-NN-plan.md`, then implement.
+1. **Start in plan mode.** Read this file, the relevant directory CLAUDE.md files, `docs/ARCHITECTURE.md`, the ADRs, the last handoff note and `docs/gates.md`. Check that the previous phase's exit gates have passed; if not, stop and say so. Write the plan to `docs/phases/phase-NN-plan.md`, then implement.
 2. **Check current docs and pin exact versions** for every tool you add, and record them in an ADR. Use the newest release that is at least 7 days old (`minimumReleaseAge` in `pnpm-workspace.yaml`).
 3. **Work on a branch** named `phase-NN-<slug>`. Commit in small steps; each commit passes `pnpm verify`.
 4. **Write an ADR for every decision.** Use the MADR template in `docs/adr/template.md` and number ADRs in sequence.
-5. **End the phase with a handoff note**, `docs/handoff/phase-NN.md`: what was built, pinned versions, open issues, notes for the next phase.
+5. **End the phase with a handoff note**, `docs/handoff/phase-NN.md`: what was built, pinned versions, open issues, notes for the next phase. Log the phase's exit gates in `docs/gates.md` and the handoff. A phase whose gate fails is not done: its PR stays a draft, and the owner decides whether to fix the problem or cut scope.
 6. **Open a PR titled "Phase NN — Title"**, using the PR template's 12-quality checklist. CI must be green, and CodeRabbit feedback must be resolved before merge.
 
 `origin` is the SSH URL (`git@github.com:snjsinghdev/kanche.git`), so a plain `git push` works. Never push over HTTPS with the `gh` token: it has no `workflow` scope, and GitHub rejects pushes that touch `.github/workflows/`.

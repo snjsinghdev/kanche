@@ -7,7 +7,12 @@ The Kanche app: Vite + PixiJS (WebGL), shipped to Android and iOS by Capacitor a
 - **270×480 portrait base.** The game draws in game pixels. `src/viewport.ts` places it: integer scale when that fills at least 90% of the screen, otherwise "sharp" (render at ⌈fit⌉ and downscale), always inside the safe area. Textures use `nearest` scaling and `roundPixels`.
 - **Safe areas.** `src/safe-area.ts` reads `env(safe-area-inset-*)` and Capacitor's `--safe-area-inset-*`. `MainActivity` enables edge-to-edge.
 - **Wordless first.** No text in the game UI. Every core action reads without words; chat is preset emotes. The page body has no text (an e2e test checks).
-- **Budgets are tests** (`budgets.json`): initial JS gzip, art, audio, and the Android download of 30 MB or less. Lazy-load what the first shot doesn't need. Avoid per-frame allocations. The target is 30 fps p95 on a low-end Android phone (Phase 3).
+- **Budgets are tests** (`budgets.json`):
+  - initial JS gzip, art, audio, and the Android download of 30 MB or less;
+  - frame times per device tier: on the reference budget phone at least 95% of frames within 16.7 ms and none over 50 ms during a shot; on mid-range at least 99% and none over 33 ms (ADR-0002, the Kanche Visual Benchmark).
+
+  Lazy-load what the first shot doesn't need, and avoid per-frame allocations.
+
 - **Accessibility.** Large thumb targets, reduced motion respected, colour never the only signal, and an accessible name on the canvas.
 - **Never write marble ownership.** The client sends shot inputs; the server decides.
 - **The browser floor is pinned** in `vite.config.ts` (`chrome111`, `safari16.4`). Moving it needs an ADR.
