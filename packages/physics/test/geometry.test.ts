@@ -136,6 +136,9 @@ describe('static features', () => {
     expect(wall.nx).toBeCloseTo(-1, 12);
     expect(gap(of('pit-wall'), 0.52, 0.5, 0).valid).toBe(false);
     expect(gap(of('pit-wall'), 0.5, 0.5, -0.01).valid).toBe(false);
+    // Below the rim's circle but outside the hole: not the pit wall (or a marble anywhere low on
+    // the court would see it).
+    expect(gap(of('pit-wall'), 0.5 + hole.rc + 0.01, 0.5, hole.zc - 0.01).valid).toBe(false);
     expect(gap(of('floor'), 0.5, 0.5, -0.02).gap).toBeCloseTo(0.01 - R, 12);
     expect(gap(of('floor'), 0.6, 0.5, -0.02).valid).toBe(false);
     expect(holeRadial(hole, 0.53, 0.54)).toBeCloseTo(0.05, 15);

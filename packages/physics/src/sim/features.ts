@@ -194,7 +194,8 @@ export function featureGap(
       const hole = court.hole;
       if (hole === undefined) return noGap(out);
       const rho = holeRadial(hole, x, y);
-      if (z > hole.zc || rho === 0) return noGap(out);
+      // Only inside the hole: below the rim's circle and within its radius.
+      if (z > hole.zc || rho === 0 || rho >= hole.rc) return noGap(out);
       const ex = (x - hole.cx) / rho;
       const ey = (y - hole.cy) / rho;
       return setGap(out, hole.rh - rho - r, -ex, -ey, 0, 1);

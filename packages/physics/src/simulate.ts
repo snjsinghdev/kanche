@@ -17,7 +17,7 @@ import { SIZE_CLASSES, type PhysicsParams, type SurfaceParams } from './params/t
 import { MOTION_STATES, type MarbleInit } from './state.ts';
 import { locateCell, newMetrics, supportLevel, type World } from './sim/advance.ts';
 import { BASE, FLOOR, makeBody, type Body } from './sim/body.ts';
-import { holeRadial, insideBlock, staticFeatures } from './sim/features.ts';
+import { featureGap, holeRadial, insideBlock, newGap, staticFeatures } from './sim/features.ts';
 import { Sim } from './sim/world.ts';
 import { physicsVersion } from './version.ts';
 
@@ -122,6 +122,20 @@ function initBody(m: MarbleInit, world: World): Body {
   return b;
 }
 
+/** A marble must not start inside a wall, a block, the hole's rim or wall, or the ground. */
+function checkFeatures(bodies: readonly Body[], world: World): void {
+  const fg = newGap();
+  for (const b of bodies) {
+    if (b.done) continue;
+    for (const f of world.features) {
+      const g = featureGap(world.court, f, b.r, b.s.x, b.s.y, b.s.z, fg);
+      if (g.valid && g.gap < -OVERLAP_TOLERANCE) {
+        invalid(`marble ${String(b.id)} starts inside the court's ${f.kind}`);
+      }
+    }
+  }
+}
+
 function checkOverlaps(bodies: readonly Body[]): void {
   bodies.forEach((a, i) => {
     if (a.done) return;
@@ -160,6 +174,7 @@ export function simulateShot(setup: ShotSetup, options: ShotOptions = {}): ShotR
     if (next !== undefined && next.id === b.id) invalid(`duplicate marble id ${String(b.id)}`);
   });
   checkOverlaps(bodies);
+  checkFeatures(bodies, world);
   if (setup.shot !== undefined) {
     const { marbleId, flick } = setup.shot;
     const shooter = bodies.find((b) => b.id === marbleId);

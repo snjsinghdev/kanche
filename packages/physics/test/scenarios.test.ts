@@ -348,8 +348,11 @@ describe('edges and corners', () => {
   });
 
   it('a marble creeping into a curb slower than vRest meets its edge inelastically and stops', () => {
+    // It touches the 2 mm curb's edge 5.29 mm short of it; start 1 µm before that, since a
+    // 0.5 mm/s roll stops within 1.6 µm.
+    const touch = Math.sqrt(R8 * R8 - (R8 - 0.002) * (R8 - 0.002));
     const r = run(curb, [
-      { id: 1, size: 'r80', x: 0.3 - 0.0045, y: 0, vx: 0.0005, wy: 0.0005 / R8 },
+      { id: 1, size: 'r80', x: 0.3 - touch - 1e-6, y: 0, vx: 0.0005, wy: 0.0005 / R8 },
     ]);
     const impact = r.events.find((e) => e.kind === 'impact');
     expect(impact).toMatchObject({ feature: 'edge' });

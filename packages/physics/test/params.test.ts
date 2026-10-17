@@ -202,3 +202,31 @@ describe('deriveParams', () => {
     expect(() => deriveParams(PARAMS_V1, overrides as never)).toThrow(PhysicsError);
   });
 });
+
+describe('PARAMS_V1', () => {
+  it('is frozen all the way down, tables included', () => {
+    const t = PARAMS_V1.surfaces.cement.muR;
+    for (const part of [
+      PARAMS_V1,
+      PARAMS_V1.surfaces,
+      PARAMS_V1.surfaces.cement,
+      t,
+      t.data,
+      t.data.x,
+      t.data.y,
+      t.segments,
+      t.segments[0],
+      PARAMS_V1.glass.e.segments[0],
+      PARAMS_V1.solver,
+    ]) {
+      expect(Object.isFrozen(part)).toBe(true);
+    }
+  });
+
+  it("keeps its own copies of a table's breakpoints", () => {
+    const x = [0, 1];
+    const table = makeTable({ x, y: [0.5, 0.4] }, 'copy');
+    x[1] = 9;
+    expect(table.data.x).toEqual([0, 1]);
+  });
+});

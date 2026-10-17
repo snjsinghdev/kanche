@@ -62,7 +62,12 @@ export function makeTable(data: TableData, what: string): Table {
   if (last !== undefined) {
     segments.push({ index: segments.length, x0: last.x, x1: Infinity, a: last.y, b: 0 });
   }
-  return { data, segments };
+  // Frozen all the way down, with copies of the caller's arrays: a parameter set built from
+  // tables cannot be changed through them afterwards.
+  return Object.freeze({
+    data: Object.freeze({ x: Object.freeze([...x]), y: Object.freeze([...y]) }),
+    segments: Object.freeze(segments.map((s) => Object.freeze(s))),
+  });
 }
 
 /** The segment that holds x (x0 <= x < x1). */

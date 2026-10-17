@@ -15,12 +15,12 @@ function constant(value: number, what: string): Table {
 }
 
 function surface(muS: number, muR: number, e: number, name: string): SurfaceParams {
-  return {
+  return Object.freeze({
     muS, // – PLACEHOLDER (prompt range 0.25–0.5)
     muR: constant(muR, `${name}.muR`), // – PLACEHOLDER (prompt values)
     muSp: 0.01, // – PLACEHOLDER (prompt value)
     e: constant(e, `${name}.e`), // – PLACEHOLDER (no source yet; a low bounce on hard ground)
-  };
+  });
 }
 
 export const PARAMS_V1: PhysicsParams = Object.freeze({

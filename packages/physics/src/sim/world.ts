@@ -294,38 +294,45 @@ export class Sim {
         if (best === null || before(n, best)) best = n;
       }
     }
-    // Marble pairs with a moving marble, where the boxes of their trials overlap. Each pair is
-    // searched once, the lower index first; the earliest event does not depend on the order.
-    const n = bodies.length;
-    for (let i = 0; i < n; i += 1) {
-      const ta = defined(tracks[i], 'track');
-      const A = defined(bodies[i], 'body');
-      if (!ta.moving || A.done) continue;
+    // Marble pairs, through the prompt's sort-and-sweep broadphase: the trials' boxes in order of
+    // their lower x, ties broken by id. A pair is searched when its boxes overlap and one of its
+    // marbles moves, always the lower index first; the earliest event does not depend on order.
+    const order = this.order;
+    order.length = 0;
+    bodies.forEach((b, i) => {
+      if (!b.done) order.push(i);
+    });
+    order.sort(this.byBox);
+    for (let oi = 0; oi < order.length; oi += 1) {
+      const i = defined(order[oi], 'order');
       const bi = defined(this.boxes[i], 'box');
-      for (let j = 0; j < n; j += 1) {
-        const tb = defined(tracks[j], 'track');
-        const B = defined(bodies[j], 'body');
-        if (j === i || B.done || (tb.moving && j < i)) continue;
+      for (let oj = oi + 1; oj < order.length; oj += 1) {
+        const j = defined(order[oj], 'order');
         const bj = defined(this.boxes[j], 'box');
-        if (
-          bj.xMin > bi.xMax ||
-          bi.xMin > bj.xMax ||
-          bj.yMin > bi.yMax ||
-          bi.yMin > bj.yMax ||
-          bj.zMin > bi.zMax ||
-          bi.zMin > bj.zMax
-        ) {
+        if (bj.xMin > bi.xMax) break;
+        if (bj.yMin > bi.yMax || bi.yMin > bj.yMax || bj.zMin > bi.zMax || bi.zMin > bj.zMax) {
           continue;
         }
+        const lo = Math.min(i, j);
+        const hi = Math.max(i, j);
+        const ta = defined(tracks[lo], 'track');
+        const tb = defined(tracks[hi], 'track');
+        if (!ta.moving && !tb.moving) continue;
+        const A = defined(bodies[lo], 'body');
+        const B = defined(bodies[hi], 'body');
         if (this.holds.length > 0 && this.heldPair(A, B)) continue;
-        const t =
-          i < j
-            ? pairContact(world, A, ta, B, tb, now, limit)
-            : pairContact(world, B, tb, A, ta, now, limit);
+        const t = pairContact(world, A, ta, B, tb, now, limit);
         if (t <= limit) {
-          const lo = A.id < B.id ? A : B;
-          const hi = A.id < B.id ? B : A;
-          const n: Next = { t, rank: RANK_PAIR, a: lo, b: hi, feature: null, internal: null };
+          const first = A.id < B.id ? A : B;
+          const second = A.id < B.id ? B : A;
+          const n: Next = {
+            t,
+            rank: RANK_PAIR,
+            a: first,
+            b: second,
+            feature: null,
+            internal: null,
+          };
           if (best === null || before(n, best)) best = n;
         }
       }
@@ -333,7 +340,14 @@ export class Sim {
     return best;
   }
 
+  private readonly order: number[] = [];
   private readonly movedThisStep: boolean[] = [];
+
+  /** Broadphase order: by the box's lower x, then by id. */
+  private readonly byBox = (i: number, j: number): number => {
+    const d = defined(this.boxes[i], 'box').xMin - defined(this.boxes[j], 'box').xMin;
+    return d !== 0 ? d : defined(this.bodies[i], 'body').id - defined(this.bodies[j], 'body').id;
+  };
   /** Every marble on its own: the groups whenever nothing is held. */
   private readonly singletons: Group[];
   /** The groups while the holds stay as they are (null once they change). */

@@ -38,6 +38,30 @@ describe('simulateShot input validation', () => {
     ['duplicate ids', { court, marbles: [one, { ...one, x: 0.5 }] }],
     ['overlapping marbles', { court, marbles: [one, { ...one, id: 2, x: 0.015 }] }],
     [
+      'a marble inside a wall',
+      { court: { ...court, walls: [{ x1: 0.005, y1: -0.5, x2: 0.005, y2: 0.5 }] }, marbles: [one] },
+    ],
+    [
+      "a marble inside a curb's edge",
+      {
+        court: {
+          ...court,
+          blocks: [
+            {
+              points: [
+                { x: 0.005, y: -0.5 },
+                { x: 0.3, y: -0.5 },
+                { x: 0.3, y: 0.5 },
+                { x: 0.005, y: 0.5 },
+              ],
+              height: 0.004,
+            },
+          ],
+        },
+        marbles: [one],
+      },
+    ],
+    [
       'a shot at a missing marble',
       {
         court,

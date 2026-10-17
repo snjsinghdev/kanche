@@ -10,6 +10,7 @@ import {
   PhysicsError,
   simulateShot,
   type Court,
+  type Keyframe,
   type ShotResult,
   type ShotSetup,
 } from '../../src/index.ts';
@@ -19,6 +20,25 @@ import { randomShot } from '../../src/testing/index.ts';
 import { kpbShots } from '../helpers.ts';
 
 const SHOTS = kpbShots();
+
+/**
+ * Where a marble is at time t, from its keyframes: the last keyframe at t, or, if it is still
+ * (resting or spinning) at its last keyframe before t, that keyframe, since it has not moved
+ * since. A marble moving between keyframes has no exact position at t: undefined.
+ */
+function positionAt(frames: readonly Keyframe[], t: number): Keyframe | undefined {
+  let lo = 0;
+  let hi = frames.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((frames[mid]?.t ?? Infinity) <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  const last = frames[lo - 1];
+  if (last === undefined) return undefined;
+  if (last.t === t) return last;
+  return last.motion === 'resting' || last.motion === 'spinning' ? last : undefined;
+}
 
 function shots(): { setup: ShotSetup; court: Court; result: ShotResult }[] {
   const out: { setup: ShotSetup; court: Court; result: ShotResult }[] = [];
@@ -140,8 +160,8 @@ describe('KPB 11: no interpenetration, no tunnelling, bounded events', () => {
             if (g.valid) worst = Math.min(worst, g.gap);
           }
           for (const b of tl) {
-            if (b.id <= a.id) continue;
-            const kb = b.keyframes.filter((q) => q.t === k.t).at(-1);
+            if (b.id === a.id) continue;
+            const kb = positionAt(b.keyframes, k.t);
             if (kb === undefined || kb.motion === 'pocketed' || kb.motion === 'out') continue;
             const d =
               Math.hypot(k.x - kb.x, k.y - kb.y, k.z - kb.z) - ra - (radius.get(b.id) ?? NaN);

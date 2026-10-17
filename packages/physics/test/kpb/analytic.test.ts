@@ -256,38 +256,45 @@ describe('KPB 7: Newton’s cradle', () => {
 });
 
 describe('KPB 8: unequal sizes', () => {
-  it('an 11 mm shooter meets an 8 mm marble 9.1° below horizontal and lifts as the closed form says', () => {
-    const e = 0.93;
-    const p = params({ drag: false, glassE: e, glassMu: 0, muS: 0 });
-    const r1 = PARAMS_V1.radius.r110;
-    const v = 1.2;
-    const result = run(
-      flat(),
-      [
-        { id: 1, size: 'r110', x: -0.05, y: 0, vx: v },
-        { id: 2, size: 'r80', x: 0, y: 0 },
-      ],
-      p,
-    );
-    const impact = result.events.find((ev) => ev.kind === 'impact');
-    if (impact?.kind !== 'impact') throw new Error('no impact');
-    const sinT = (r1 - R8) / (r1 + R8);
-    expect(rel(impact.nz, sinT)).toBeLessThan(EXACT);
-    expect(Math.abs((Math.asin(impact.nz) * 180) / Math.PI - 9.1)).toBeLessThan(0.05);
-    const cosT = Math.sqrt(1 - sinT * sinT);
-    const m1 = massOf(r1);
-    const m2 = massOf(R8);
-    const pre = beforeImpact(result, 1).vx;
-    // The target is pressed into the ground, which takes the vertical part of the impulse.
-    const mEff = 1 / (1 / m1 + (cosT * cosT) / m2);
-    const P = (1 + e) * mEff * pre * cosT;
-    const shooter = afterEvent(result, 1, 'impact');
-    const target = afterEvent(result, 2, 'impact');
-    expect(rel(impact.impulse, P)).toBeLessThan(EXACT);
-    expect(rel(shooter.vz, (P * sinT) / m1)).toBeLessThan(EXACT);
-    expect(rel(shooter.vx, pre - (P * cosT) / m1)).toBeLessThan(EXACT);
-    expect(rel(target.vx, (P * cosT) / m2)).toBeLessThan(EXACT);
-    expect(target.vz).toBe(0);
-    expect(shooter.motion).toBe('airborne');
-  });
+  // The prompt's two tilts: 9.5 mm on 8 mm meets 4.9° below horizontal, 11 mm on 8 mm 9.1°.
+  it.each([
+    ['r95', 4.9],
+    ['r110', 9.1],
+  ] as const)(
+    'a %s shooter meets an 8 mm marble %f° below horizontal and lifts as the closed form says',
+    (size, degrees) => {
+      const e = 0.93;
+      const p = params({ drag: false, glassE: e, glassMu: 0, muS: 0 });
+      const r1 = PARAMS_V1.radius[size];
+      const v = 1.2;
+      const result = run(
+        flat(),
+        [
+          { id: 1, size, x: -0.05, y: 0, vx: v },
+          { id: 2, size: 'r80', x: 0, y: 0 },
+        ],
+        p,
+      );
+      const impact = result.events.find((ev) => ev.kind === 'impact');
+      if (impact?.kind !== 'impact') throw new Error('no impact');
+      const sinT = (r1 - R8) / (r1 + R8);
+      expect(rel(impact.nz, sinT)).toBeLessThan(EXACT);
+      expect(Math.abs((Math.asin(impact.nz) * 180) / Math.PI - degrees)).toBeLessThan(0.05);
+      const cosT = Math.sqrt(1 - sinT * sinT);
+      const m1 = massOf(r1);
+      const m2 = massOf(R8);
+      const pre = beforeImpact(result, 1).vx;
+      // The target is pressed into the ground, which takes the vertical part of the impulse.
+      const mEff = 1 / (1 / m1 + (cosT * cosT) / m2);
+      const P = (1 + e) * mEff * pre * cosT;
+      const shooter = afterEvent(result, 1, 'impact');
+      const target = afterEvent(result, 2, 'impact');
+      expect(rel(impact.impulse, P)).toBeLessThan(EXACT);
+      expect(rel(shooter.vz, (P * sinT) / m1)).toBeLessThan(EXACT);
+      expect(rel(shooter.vx, pre - (P * cosT) / m1)).toBeLessThan(EXACT);
+      expect(rel(target.vx, (P * cosT) / m2)).toBeLessThan(EXACT);
+      expect(target.vz).toBe(0);
+      expect(shooter.motion).toBe('airborne');
+    },
+  );
 });
