@@ -102,3 +102,14 @@ The break went from 38 ms to 21 ms (12,488 substeps to 6,004) when commits becam
 ## The 1,000-shot survey (each PR)
 
 A survey script (kept out of the repository; the suites check the same properties) over `randomShot(i·7919 + 1)` for i < 1,000, with keyframes: worst ledger 6.5e-10 (shot 575), worst marble overlap 5.5e-13 m, worst feature overlap 1.2e-10 m, no caps, no errors, 3.3 ms per shot on average (71.5 ms at most), and at most 43 events in a shot.
+
+## A fresh clone
+
+`git clone --branch phase-01-physics-core` of `3c7cf00` into a scratch folder, with Deno on PATH:
+
+```text
+pnpm install --frozen-lockfile   exit 0    1 s (from the local pnpm store)
+pnpm verify                      exit 0  218 s
+pnpm e2e                         exit 0   37 s  (27 passed)
+pnpm harness                     exit 0   53 s  (PASS: all 5 engines agree, 0e4d48c50528e812/727cc953980357c6/67369b3e26944067)
+```
