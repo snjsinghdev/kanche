@@ -26,7 +26,29 @@ KPB 16's own mark is 5 ms on CI. No reference budget phone has been chosen yet (
 2. **Change what the gate measures.** The 20 ms is a frame budget for the phone showing a break. If the break simulates once when the shot is taken and the renderer then plays the timeline back, the user waits for one simulation, not one per frame. The gate could become, say, "the shot's outcome within 100 ms of release". That needs the owner's decision and a Gate 9 note before anything is measured against it.
 3. **Cut scope.** Fewer marbles in a break, or a coarser solver on the phone and the exact one on the server, is a design change (Gate 5). It is not recommended: the server and the phone must agree bit for bit (ADR-0004).
 
-**Gate 5 can't be measured.** No phase has a planned duration (Phase 0's part of Gate 5 never ran). Phase 1's actual time and its twelve design changes are logged in `docs/gates.md`. Set planned durations for Phase 2 onwards.
+**Gate 5 can't be measured.** No phase has a planned duration (Phase 0's part of Gate 5 never ran). Phase 1's actual time and its fifteen design changes are logged in `docs/gates.md`. Set planned durations for Phase 2 onwards.
+
+## The retrofit after the owner's review
+
+The owner asked why PR #2 was opened with Gate 6 failed. It shouldn't have been: PR #2 is now a draft, the Phase 0 gates are retrofitted in PR #3, and these Phase 1 gaps and CodeRabbit's eleven comments are closed on this branch:
+
+- **The broadphase is the prompt's sort-and-sweep again.** The code searched every pair with box checks instead, a deviation nothing recorded; outcomes are unchanged (ADR-0006).
+- **KPB 8 runs at 4.9° as well as 9.1°.** The Phase 1 prompt names both normals; only 9.1° was tested.
+- **The rim is fitted** (`fitRim`, ADR-0007). Its σ understates the error on data without natural variation (`docs/kpb.md`).
+- **The lab overlays footage,** a video file under the court in step with the simulation.
+- **CodeRabbit's fixes:**
+  - a marble that starts inside a wall, a block, the hole or the ground is refused;
+  - the pit-wall gap only counts inside the hole;
+  - `PARAMS_V1` is frozen all the way down;
+  - KPB 11 compares marbles at the same instant;
+  - the `kpb` and `lab` CLIs validate every argument, and name a missing one;
+  - `fitFlick` refuses degenerate data;
+  - the lab's Play test checks that time advances;
+  - the lab CLI's test reads only scenario files;
+  - the synthetic dataset's reproducibility note is corrected: its launches use `Math.cos` and `Math.sin`.
+- **Cracks and spin friction on curved supports are proposed cuts, not settled ones.** The prompt names cracks, so leaving them out is the owner's call (`docs/gates.md`, Gate 5, change 5).
+
+None of this changes an outcome: the goldens, the harness hashes and the break's hash are the same.
 
 ## What was built
 
@@ -48,12 +70,12 @@ KPB 16's own mark is 5 ms on CI. No reference budget phone has been chosen yet (
 - **`tools/kpb`, the reality-suite tools:**
   - the dataset format and Tracker import;
   - one metric extractor for filmed and replayed tracks;
-  - fits that use the simulation itself as the model (μR with Cd, μS, e(v) with μBB, and mF/eF);
+  - fits that use the simulation itself as the model (μR with Cd, μS, e(v) with μBB, the rim's e and μ, and mF/eF);
   - the scorer;
   - a **synthetic** starter dataset.
 - **`tools/physics-lab`** (`pnpm lab`): a scenario in; events, the ledger and a timeline CSV out.
 - **The client lab route** (`apps/client/lab.html`, dev, debug and e2e builds only):
-  - vectors, trails, live values, A/B parameter sets and a Tracker overlay;
+  - vectors, trails, live values, A/B parameter sets, a Tracker overlay and a footage overlay;
   - a bench hook, to time the break in a phone's browser.
 
   The production bundle is byte-identical without it.
@@ -77,17 +99,17 @@ KPB 16's own mark is 5 ms on CI. No reference budget phone has been chosen yet (
 
 ## Gate status
 
-| Done-when item                                                                                                                                                            | Status                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Analytic, integrity, determinism and reference suites pass; coverage gate holds (a fresh clone passes `pnpm verify`, `pnpm e2e` and `pnpm harness`: `evidence/phase-01/`) | **Partly.** Analytic, integrity and determinism pass (over 10,000 shots too). Coverage is 96.2 / 91.9 / 99.1 / 97.1%. **Reference (KPB 14) is open:** 60 of 81 collisions agree with pooltool as shipped. Draws differ through a sign error in pooltool, and head-on returns through a model difference (`docs/kpb.md`) |
-| The KPB scorer runs on the starter dataset; scores in `docs/kpb.md`                                                                                                       | ✅ On the **synthetic** dataset: the true and fitted parameters pass 48 of 48 metrics, and v1 passes 35. The reality gate (KPB 15) stays **open** with no footage                                                                                                                                                       |
-| `docs/physics.md` holds derivations, sign conventions and diagrams                                                                                                        | ✅                                                                                                                                                                                                                                                                                                                      |
-| ADR-0006 and ADR-0007                                                                                                                                                     | ✅                                                                                                                                                                                                                                                                                                                      |
-| Golden replays committed                                                                                                                                                  | ✅ 200, identical in five engines                                                                                                                                                                                                                                                                                       |
-| This handoff records performance numbers, KPB scores and open questions                                                                                                   | ✅                                                                                                                                                                                                                                                                                                                      |
-| PR "Phase 01 — Physics core" reviewed                                                                                                                                     | [PR #2](https://github.com/snjsinghdev/kanche/pull/2) is open; CI and CodeRabbit's review are in progress                                                                                                                                                                                                               |
-| **Exit gate 6** (break ≤ 20 ms on the reference phone, stack unchanged)                                                                                                   | ❌ **Failed**: 29.6 ms on a mid-range phone. Stack unchanged                                                                                                                                                                                                                                                            |
-| **Exit gate 5** (planned vs actual, design changes)                                                                                                                       | Logged in `docs/gates.md`; **can't be measured**, because there is no plan duration                                                                                                                                                                                                                                     |
+| Done-when item                                                                                                                                                            | Status                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Analytic, integrity, determinism and reference suites pass; coverage gate holds (a fresh clone passes `pnpm verify`, `pnpm e2e` and `pnpm harness`: `evidence/phase-01/`) | **Partly.** Analytic, integrity and determinism pass (over 10,000 shots too). Coverage is 96.3 / 91.8 / 99.1 / 97.1% (statements, branches, functions, lines). **Reference (KPB 14) is open:** 60 of 81 collisions agree with pooltool as shipped. Draws differ through a sign error in pooltool, and head-on returns through a model difference (`docs/kpb.md`) |
+| The KPB scorer runs on the starter dataset; scores in `docs/kpb.md`                                                                                                       | ✅ On the **synthetic** dataset: the true and fitted parameters pass 48 of 48 metrics, and v1 passes 35. The reality gate (KPB 15) stays **open** with no footage                                                                                                                                                                                                |
+| `docs/physics.md` holds derivations, sign conventions and diagrams                                                                                                        | ✅                                                                                                                                                                                                                                                                                                                                                               |
+| ADR-0006 and ADR-0007                                                                                                                                                     | ✅                                                                                                                                                                                                                                                                                                                                                               |
+| Golden replays committed                                                                                                                                                  | ✅ 200, identical in five engines                                                                                                                                                                                                                                                                                                                                |
+| This handoff records performance numbers, KPB scores and open questions                                                                                                   | ✅                                                                                                                                                                                                                                                                                                                                                               |
+| PR "Phase 01 — Physics core" reviewed                                                                                                                                     | [PR #2](https://github.com/snjsinghdev/kanche/pull/2) is a **draft** while Gate 6 fails. CodeRabbit's eleven comments are fixed in the retrofit                                                                                                                                                                                                                  |
+| **Exit gate 6** (break ≤ 20 ms on the reference phone, stack unchanged)                                                                                                   | ❌ **Failed**: 29.6 ms on a mid-range phone. Stack unchanged                                                                                                                                                                                                                                                                                                     |
+| **Exit gate 5** (planned vs actual, design changes)                                                                                                                       | Logged in `docs/gates.md`; **can't be measured**, because there is no plan duration                                                                                                                                                                                                                                                                              |
 
 ## KPB v1 scores (physicsVersion 1)
 
@@ -120,13 +142,16 @@ These are also logged under Gate 5 in `docs/gates.md`:
 - **Held contacts use an exact LCP.**
 - **Substeps are refined** near stops and on curved supports.
 - **KPB 6 checks tan θ,** under the small-slope model.
-- **Two v1 simplifications:** cracks and spin friction on curved supports are not modelled.
+- **Two proposed cuts, awaiting the owner:** cracks and spin friction on curved supports are not modelled.
 - **pooltool is vendored,** not installed.
 - **e(v) and μBB are fitted jointly.**
 - **KPB 16's wall time is measured in an uninstrumented bench,** with a CI ceiling. The suite holds the substep count.
 - **The lab is Canvas2D.**
 - **The goldens were regenerated before the merge:** v1 is frozen at the merge.
 - **`tools/kpb`'s tests run without coverage,** because instrumentation slows the simulation tenfold and that package has no gate.
+- **The rim is fitted,** which the plan left for later.
+- **The lab overlays the footage itself,** which the plan left out with filming.
+- **The broadphase is sort-and-sweep,** as the plan said. The code had deviated without a record until the retrofit.
 
 ## Open issues
 
@@ -138,20 +163,21 @@ These are also logged under Gate 5 in `docs/gates.md`:
    - Choose 5 or 10 repeats per condition first. With 5, a metric the launch doesn't drive fails a perfect simulation about 5% of the time by chance (`docs/kpb.md`).
    - Write that decision into `docs/gates.md` before scoring (Gate 9).
 4. **Every coefficient is a PLACEHOLDER** until it is fitted. Fitted values ship as `physicsVersion` 2.
-5. **v1 simplifications:**
-   - cracks (lowered blocks);
-   - spin friction on curved supports;
+5. **Proposed cuts, for the owner to confirm or reject:**
+   - **cracks** (lowered blocks), which the prompt names. Building them needs a lowered-floor support region with entry and exit probes, strikes between the floor and the edges, and tests for a marble lodged across a narrow crack (`docs/gates.md`, Gate 5, change 5);
+   - spin friction on curved supports.
+6. **v1 simplifications:**
    - the small-slope model for supports and impacts on slopes;
    - blocks must be lower than the smallest marble (8 mm).
-6. **The Phase 0 gates never ran:**
+7. **The Phase 0 gates never ran.** PR #3 retrofits them and waits on the owner:
    - legal questions (Gate 3);
    - the reference budget phone (Gate 6);
    - phase durations (Gate 5).
-7. **The prompt-pack export sits in the repository root.** `GATES.md`, `MECHANICS-REVIEW.md`, `VISUAL-BENCHMARK.md`, `prompts/` and a replaced `README.md` arrived during this phase, and are left uncommitted and untouched.
+8. **The prompt-pack export sits in the repository root.** `GATES.md`, `MECHANICS-REVIEW.md`, `VISUAL-BENCHMARK.md`, `prompts/` and a replaced `README.md` arrived during this phase, and are left uncommitted and untouched.
    - They fail Prettier there, and the replaced `README.md` overwrites the project's own.
    - This phase treated the updated Phase 1 prompt (its exit gates) as authoritative. Its other changes (Phase 0's visual non-negotiable, KVB v1 from Phase 3) don't touch Phase 1.
    - Moving the export into `docs/prompt-pack/` is the owner's call.
-8. **The KPB 16 bench on CI hardware** is new. Its first numbers are in the `kpb16` artifact of the PR's CI run, and the 60 ms ceiling should be revisited once they are known.
+9. **The KPB 16 bench on CI hardware** is new. Its first numbers are in the `kpb16` artifact of the PR's CI run, and the 60 ms ceiling should be revisited once they are known.
 
 ## Notes for Phase 2 (rules and modes)
 

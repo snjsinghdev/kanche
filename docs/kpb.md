@@ -6,7 +6,7 @@ KPB v1 is the bar `packages/physics` is held to. The review that defines it is [
 
 | Suite       | Tests | Pass mark                                                             | Result                                                                                                                                                                                                                                                    | Status |
 | ----------- | ----- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Analytic    | 1–8   | Closed forms to 1e-9 relative                                         | All pass. KPB 6 checks (5/7)·g·tan θ under the small-slope model (ADR-0007). Each test fails when its law is broken (mutation checks, `evidence/phase-01/`)                                                                                               | PASS   |
+| Analytic    | 1–8   | Closed forms to 1e-9 relative                                         | All pass. KPB 6 checks (5/7)·g·tan θ under the small-slope model (ADR-0007). KPB 8 runs at both of the Phase 1 prompt's normals, 4.9° and 9.1°. Each test fails when its law is broken (mutation checks, `evidence/phase-01/`)                            | PASS   |
 | Integrity   | 9–12  | Ledger to 1e-9; no gain; no penetration > 1e-9 m; halving dt < 1e-9 m | 1,000 shots per PR and 10,000 nightly: worst ledger 6.5e-10, worst pair overlap 5.5e-13 m, worst static 1.2e-10 m (1,000 shots), no caps. Halving dt moves final positions by 2e-11 m. The first 10,000-shot run found five defects, now fixed (evidence) | PASS   |
 | Determinism | 13    | Identical hashes in Chromium, WebKit, Firefox, Node and Deno          | 200 golden replays and 1,000 seeded shots (10,000 nightly) identical in all five; the break's hash is also identical in Chrome on an ARM phone                                                                                                            | PASS   |
 | Reference   | 14    | Within 0.5% of pooltool's frictional_mathavan                         | 60 of 81 collisions within 0.5% (worst 0.24%). Draws differ by up to 13% (a sign error in pooltool), head-on returns by up to 5.5% (a model difference)                                                                                                   | OPEN   |
@@ -74,10 +74,21 @@ The fits recover what the set was made with:
 | glass.e at 0.98 m/s     | 0.923 ± 0.005      | 0.931  | 5          |
 | glass.e at 1.98 m/s     | 0.909 ± 0.005      | 0.904  | 5          |
 | glass.mu (μBB)          | 0.0638 ± 0.0008    | 0.065  | 25         |
-| flick.fingerMass (kg)   | 0.0049 ± 0.0004    | 0.0055 | 30         |
-| flick.fingerRestitution | 0.66 ± 0.09        | 0.55   | 30         |
+| edge.e (the rim)        | 0.420 ± 0.026      | 0.40   | 15         |
+| edge.mu (the rim)       | 0.255 ± 0.006      | 0.25   | 15         |
+| flick.fingerMass (kg)   | 0.0058 ± 0.0004    | 0.0055 | 30         |
+| flick.fingerRestitution | 0.49 ± 0.06        | 0.55   | 30         |
 
-The errors are cluster-robust over recordings. With five recordings, read them with Student's t at four degrees of freedom, so ±3σ becomes ±6.6σ. From tracking noise alone (`makeSynthetic({ variation: false })`), every estimate is within 3σ of the truth, or within 0.5%. The one systematic is −0.1% on e at the fastest breakpoint, where the table's flat extension cuts off the faster hits.
+The errors are cluster-robust over recordings. With five recordings, read them with Student's t at four degrees of freedom, so ±3σ becomes ±6.6σ. From tracking noise alone (`makeSynthetic({ variation: false })`), every estimate is within 3σ of the truth, or within 0.5%, except the rim's. The one systematic is −0.1% on e at the fastest breakpoint, where the table's flat extension cuts off the faster hits.
+
+**The rim's σ is not reliable on its own.** The rim fit's residuals are rugged in e and μ, so it starts from three points and keeps the best (ADR-0007).
+
+- From noise alone, the full calibration recovers e as 0.408 ± 0.001 (+2.1%, about 8σ out) and μ as 0.253 ± 0.005 (+1.4%, within 1σ).
+- Fitting the rim alone, from v1's 0.5 and 0.3 with the truth elsewhere, gives −1.7% (about 11σ) and −4.5% (about 3σ).
+- So without repeat-to-repeat variation its σ understates the error, and its test holds it to 5% instead of 3σ.
+- With the variation real footage has, its σ is realistic: the rim's estimates above are within 1σ of the truth.
+
+Regenerating the dataset with the rim's truth changed the hole shots' track lengths, so the tracking noise drawn for the flicks after them changed too. That is why the finger's estimates differ from the first run's (0.0049 kg and 0.66), within their errors both times.
 
 ### The pass mark with five repeats
 

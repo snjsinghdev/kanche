@@ -1,5 +1,5 @@
 {
-  "note": "SYNTHETIC dataset (packages/testkit/kpb/synthetic-v1.json): proves the KPB tools only, says nothing about real marbles. Units: m for positions and roll-outs, s for slide times, degrees for angles, \u2013 for ratios and capture.",
+  "note": "SYNTHETIC dataset (packages/testkit/kpb/synthetic-v1.json): proves the KPB tools only, says nothing about real marbles. Units: m for positions and roll-outs, s for slide times, degrees for angles, – for ratios and capture.",
   "scorer": "pass when the RMS per-repeat error <= 1.5 x the filmed repeat scatter (tools/kpb/src/score.ts)",
   "estimates": [
     {
@@ -23,7 +23,7 @@
     {
       "name": "tile.muR",
       "value": 0.0068447,
-      "sigma": 9.5e-5,
+      "sigma": 0.000095,
       "recordings": 10
     },
     {
@@ -69,15 +69,27 @@
       "recordings": 25
     },
     {
+      "name": "edge.e",
+      "value": 0.42006,
+      "sigma": 0.026,
+      "recordings": 15
+    },
+    {
+      "name": "edge.mu",
+      "value": 0.25469,
+      "sigma": 0.0057,
+      "recordings": 15
+    },
+    {
       "name": "flick.fingerMass",
-      "value": 0.00494,
-      "sigma": 0.00038,
+      "value": 0.0058483,
+      "sigma": 0.00039,
       "recordings": 30
     },
     {
       "name": "flick.fingerRestitution",
-      "value": 0.65659,
-      "sigma": 0.087,
+      "value": 0.48635,
+      "sigma": 0.063,
       "recordings": 30
     }
   ],
@@ -301,98 +313,98 @@
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:1",
         "error": 0.00573,
         "scatter": 0.0369,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:2",
         "error": 0.00672,
         "scatter": 0.0455,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:target",
         "error": 0.0191,
         "scatter": 0.0642,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:shooter",
         "error": 0.0265,
         "scatter": 0.102,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:target",
         "error": 1.5,
         "scatter": 6.92,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:shooter",
         "error": 2.74,
         "scatter": 6.06,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:1",
         "error": 0.0116,
         "scatter": 0.0366,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:2",
         "error": 0.0105,
         "scatter": 0.0231,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:target",
         "error": 0.0239,
         "scatter": 0.0557,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:shooter",
         "error": 0.0227,
         "scatter": 0.0588,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:target",
         "error": 1.09,
         "scatter": 4.95,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:shooter",
         "error": 1.14,
         "scatter": 3.66,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "rest:1",
         "error": 0.00318,
         "scatter": 0.0181,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "bank-angle",
         "error": 0.474,
         "scatter": 0.936,
@@ -639,98 +651,98 @@
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:1",
         "error": 0.00512,
         "scatter": 0.0369,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:2",
         "error": 0.0066,
         "scatter": 0.0455,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:target",
         "error": 0.0206,
         "scatter": 0.0642,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:shooter",
         "error": 0.0266,
         "scatter": 0.102,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:target",
         "error": 1.48,
         "scatter": 6.92,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:shooter",
         "error": 2.78,
         "scatter": 6.06,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:1",
         "error": 0.0118,
         "scatter": 0.0366,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:2",
         "error": 0.0106,
         "scatter": 0.0231,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:target",
         "error": 0.0239,
         "scatter": 0.0557,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:shooter",
         "error": 0.0228,
         "scatter": 0.0588,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:target",
         "error": 1.12,
         "scatter": 4.95,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:shooter",
         "error": 1.21,
         "scatter": 3.66,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "rest:1",
         "error": 0.0029,
         "scatter": 0.0181,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "bank-angle",
         "error": 0.559,
         "scatter": 0.936,
@@ -977,98 +989,98 @@
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:1",
         "error": 0.00361,
         "scatter": 0.0369,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "rest:2",
         "error": 0.00873,
         "scatter": 0.0455,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:target",
         "error": 0.0234,
         "scatter": 0.0642,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "speed-ratio:shooter",
         "error": 0.0274,
         "scatter": 0.102,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:target",
         "error": 1.77,
         "scatter": 6.92,
         "pass": true
       },
       {
-        "condition": "cut cement 30\u00b0",
+        "condition": "cut cement 30°",
         "metric": "departure:shooter",
         "error": 2.69,
         "scatter": 6.06,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:1",
         "error": 0.0144,
         "scatter": 0.0366,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "rest:2",
         "error": 0.00949,
         "scatter": 0.0231,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:target",
         "error": 0.035,
         "scatter": 0.0557,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "speed-ratio:shooter",
         "error": 0.0211,
         "scatter": 0.0588,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:target",
         "error": 0.846,
         "scatter": 4.95,
         "pass": true
       },
       {
-        "condition": "cut cement 45\u00b0",
+        "condition": "cut cement 45°",
         "metric": "departure:shooter",
         "error": 1.51,
         "scatter": 3.66,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "rest:1",
         "error": 0.00676,
         "scatter": 0.0181,
         "pass": true
       },
       {
-        "condition": "bank tile 45\u00b0",
+        "condition": "bank tile 45°",
         "metric": "bank-angle",
         "error": 1.97,
         "scatter": 0.936,

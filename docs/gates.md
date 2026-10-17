@@ -68,7 +68,14 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
   2. **Held contacts use an exact LCP** with relaxation after impacts. The plan said a single frictionless constraint force (ADR-0006).
   3. **Substeps are refined** near Coulomb stops and on curved supports, inside the fixed step (ADR-0006).
   4. **KPB 6 checks tan θ**, under the review's own small-slope model (ADR-0007).
-  5. **Cut from v1:** cracks (lowered blocks) and spin friction on curved supports (ADR-0007).
+  5. **Proposed cuts from v1, awaiting the owner's confirmation:** cracks (lowered blocks), and spin friction on curved supports (ADR-0007).
+     - The Phase 1 prompt names cracks ("steps, curbs and cracks lower than R"), so leaving them out is a scope cut, not a simplification. It stands only if the owner agrees.
+     - **What building cracks takes.** A crack is the first court feature that isn't convex.
+       - It needs a new support region (the lowered floor), and probes for entering and leaving it across an edge.
+       - From the floor, the crack's edges must be strikeable, and from an edge, its floor and other edges.
+       - A marble lodged across a narrow crack rests on one edge while held by the other: two edge contacts at once, which no court has exercised yet and which needs its own tests.
+       - It also adds feature checks to the per-step path that Gate 6 is waiting on.
+     - **Why it is deferred, not built in the retrofit:** no court needs a crack until Phase 2's courts are designed, and the performance work comes first.
   6. **pooltool is vendored,** the plan's fallback, because it needs a development panda3d on Linux (ADR-0007).
   7. **e(v) and μBB are fitted jointly,** not one after the other, because each biases the other (ADR-0007).
   8. **KPB 16's wall time is measured outside the test runner.** Coverage instrumentation slows the shot twelvefold, so the timing runs in `scripts/bench.ts`, with a regression ceiling in CI. The suite holds the deterministic substep count (ADR-0006).
@@ -76,3 +83,6 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
   10. **The golden replays were regenerated** before the merge: v1 is frozen at the merge (ADR-0006).
   11. **The KPB 10,000-shot suites run nightly** in their own job, without coverage. The KPB tools' tests also run without coverage.
   12. **The fixes from the 10,000-shot survey change the algorithm:** static contacts are searched per surface; a rounding-rate closing within `gapTol` is not a contact; no impulse step changes the normal speed by less than 1e-12 m/s; a plane-supported marble's separation is removed along the plane; and `DRAG_SIDE` is 3e-4 (ADR-0006, ADR-0007).
+  13. **The rim is fitted,** which the plan left for later. `fitRim` fits the hole rim's restitution and friction from the hole shots, as the fourth calibration step, before the finger (ADR-0007).
+  14. **The lab overlays the footage itself,** not only its tracked positions. The plan left video out along with filming, but the prompt's lab "overlays tracked real-world footage on the simulation". The overlay is tested on a generated clip; no real footage is involved (ADR-0007).
+  15. **The broadphase is the prompt's sort-and-sweep.** Until the retrofit the code searched every pair whose boxes overlapped, an undocumented deviation; outcomes are the same either way (ADR-0006).

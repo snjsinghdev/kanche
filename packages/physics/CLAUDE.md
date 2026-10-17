@@ -20,7 +20,7 @@ The deterministic simulation core. The phone, the browser, the AI worker and the
 
 ## Tests
 
-- Coverage gate: 90% lines, branches, functions and statements (`vitest.config.ts`). It is now at 96 / 92 / 99 / 97.
+- Coverage gate: 90% lines, branches, functions and statements (`vitest.config.ts`). It is now at 97 / 92 / 99 / 96.
 - **The KPB v1 suites** are in `test/kpb/`: analytic 1–8, integrity 9–12, determinism 13, reference 14 and performance 16. `docs/kpb.md` has the pass marks and scores.
   - `KANCHE_KPB_SHOTS=10000` runs integrity and determinism at the nightly size.
   - Heavy tests carry their own timeouts.

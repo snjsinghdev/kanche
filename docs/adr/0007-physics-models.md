@@ -56,10 +56,12 @@ Chosen option: **the models below**.
 
 The hole's rim torus, block edges (radius-0 tubes) and block corners (points) are exact constraints. The normal force comes from the constraint, take-off happens when it reaches zero, and Coulomb sliding or rolling friction acts on them. Marbles hit, pivot over and hop edges.
 
-**v1 simplifications:**
+**Proposed cuts, awaiting the owner's confirmation** (`docs/gates.md`, Gate 5, change 5):
 
-- Blocks are raised only (0 < height < 8 mm). Cracks, which are lowered blocks, are not implemented.
-- Spin friction about the contact normal acts on planes only, not on curved supports.
+- **Blocks are raised only** (0 < height < 8 mm). Cracks, which are lowered blocks, are not implemented, although the Phase 1 prompt names them.
+  - A crack is the first feature that isn't convex. It needs a lowered-floor support region with entry and exit probes across its edges, strikes between its floor and its edges, and rest across a narrow crack, held by the far edge.
+  - It is deferred until the owner decides, and until Phase 2's courts show whether any needs one.
+- **Spin friction about the contact normal** acts on planes only, not on curved supports.
 
 ### The hole
 
@@ -100,7 +102,11 @@ Drag is quadratic, F = −½·ρ·Cd·A·|v|·v, with Cd = 0.5 as a PLACEHOLDER.
   1. μR per surface together with Cd, from rolls;
   2. μS per surface, from stunned launches;
   3. e(v) and μBB together, from head-on hits and cuts, because each moves the other's evidence;
-  4. mF and eF in closed form, from central flicks.
+  4. the rim's restitution and friction (`edge.e` and `edge.mu`), from the hole shots:
+     - only the track up to 0.15 s after the marble reaches the rim is used, because the rim leaves its mark there and the long roll after it would swamp it;
+     - the fit starts from v1, and from v1 × 0.8 and × 1.2, and keeps the best, because the residuals are rugged in these two coefficients;
+     - its σ is a local curvature, so it understates the error when the repeats don't vary. From tracking noise alone it recovers the truth to within 5%, not 3σ;
+  5. mF and eF in closed form, from central flicks.
 - **Scoring.** A metric passes when the RMS per-repeat error is ≤ 1.5 × the filmed repeat scatter. With five repeats, a metric the launch does not drive fails a perfect simulation about 5% of the time by chance, against 0.5% with ten repeats (Monte Carlo, docs/kpb.md).
 - **The synthetic starter dataset** (`packages/testkit/kpb/synthetic-v1.json`) is generated from the simulation with known coefficients, is flagged `synthetic: true`, and proves the tools only.
 
@@ -108,23 +114,26 @@ Drag is quadratic, F = −½·ρ·Cd·A·|v|·v, with Cd = 0.5 as a PLACEHOLDER.
 
 - `tools/physics-lab` is a CLI that writes events, the ledger and a timeline CSV.
 - `apps/client/lab.html` is a page built only in dev, debug and e2e modes. It reuses the Tracker parser from `@kanche/kpb/tracker`, and the production bundle is byte-identical without it.
+- The page plays a filmed clip under the court, in step with the simulation. Its corners are given in court metres and its start as an offset in seconds, so a filmed shot and its replay can be compared by eye.
 
 ### Consequences
 
 - Good, because every model above has a test that fails when its law is broken, and impacts never add energy (KPB 9 over 1,000 shots per PR and 10,000 nightly).
 - Good, because the reference comparison found a real defect in the reference itself rather than hiding it, and the tools can fit and score real footage as soon as it exists.
-- Bad, because cracks, spin friction on curved supports, and impacts and supports on steep slopes (small-slope model) are v1 simplifications. They are listed as open in the handoff.
+- Bad, because impacts and supports on steep slopes (the small-slope model) are a v1 simplification, and cracks and spin friction on curved supports are proposed cuts the owner has not yet confirmed. All three are listed as open in the handoff.
 - Bad, because KPB 14 and 15 stay open. KPB 14 has the two findings above; KPB 15 has no footage. Every coefficient is still a PLACEHOLDER.
 
 ### Confirmation
 
 - `test/kpb/reference.test.ts`: the 60 shots agree with pooltool as shipped, all 75 cut shots with the sign corrected, the open cases are only the recorded ones, and 256 steps are converged.
 - `tools/kpb/test/kpb.test.ts`:
-  - the fits recover the truth (within 3σ, or 0.5%, from noise alone, and within the t-adjusted interval with variation);
+  - the fits recover the truth (within 3σ, or 0.5%, from noise alone, the rim within 5%; and within the t-adjusted interval with variation, the rim included);
   - the true and fitted parameters pass all 48 metrics;
   - v1 fails 13;
   - a 30% error in μR fails the cement roll-outs.
 - `test/scenarios.test.ts`: walls, steps and curbs, the hole, resting contacts, edges and corners.
+- `test/kpb/analytic.test.ts`: KPB 8 at both of the Phase 1 prompt's normals, 4.9° (9.5 mm on 8 mm) and 9.1° (11 mm on 8 mm).
+- `apps/client/e2e/lab.spec.ts`: the footage overlay shows a generated clip under the court (Chromium).
 
 ## Pros and cons of the options
 

@@ -15,15 +15,15 @@ Every coefficient in `PARAMS_V1` is a PLACEHOLDER until real marbles are filmed 
 
 Film on smooth cement, packed dirt, ceramic tile, sand and wet cement. Repeat **every condition at least five times**, because the repeats' spread is the scatter the pass mark is measured against. Film ten repeats where you can for the slides and impacts (`kpb.md`, "The pass mark with five repeats"). Keep a note of each surface: its temperature, how damp it is, and what it is made of.
 
-| Kind (dataset `kind`) | Set-up                                                                                                                                         | Fits                              | Scored on                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------- |
-| `roll`                | Off the ramp on open ground at two speeds (about 0.6 and 1.0 m/s); film until the marble stops. Long rolls on tile and cement show drag        | μR per surface, and Cd            | roll-out, rest position                        |
-| `stun`                | Struck at centre height, so it slides with no spin, at about 1.2 m/s                                                                           | μS per surface                    | slide time, roll-out, rest position            |
-| `head-on`             | Off the ramp into a still marble 0.25 m away, dead centre, at three speeds (0.5, 1 and 2 m/s)                                                  | e(v), glass on glass              | speed ratios, rest positions                   |
-| `cut`                 | Off the ramp into a still marble 0.3 m away, offset for 30° and 45° cuts                                                                       | μBB, glass on glass               | departure angles, speed ratios, rest positions |
-| `bank`                | Off the ramp at 45° into a wall                                                                                                                | (wall e and μ, later)             | bank angle, rest position                      |
-| `hole`                | Off the ramp at the hole, dead centre and offset by 0.8 and 1.0 of its radius                                                                  | (the rim model, later)            | capture                                        |
-| `flick`               | A real finger flick, centred, of each marble size at a soft and a hard setting. Track the fingertip too: its speed at contact is `fingerSpeed` | the finger's mass and restitution | (fit only)                                     |
+| Kind (dataset `kind`) | Set-up                                                                                                                                         | Fits                               | Scored on                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
+| `roll`                | Off the ramp on open ground at two speeds (about 0.6 and 1.0 m/s); film until the marble stops. Long rolls on tile and cement show drag        | μR per surface, and Cd             | roll-out, rest position                        |
+| `stun`                | Struck at centre height, so it slides with no spin, at about 1.2 m/s                                                                           | μS per surface                     | slide time, roll-out, rest position            |
+| `head-on`             | Off the ramp into a still marble 0.25 m away, dead centre, at three speeds (0.5, 1 and 2 m/s)                                                  | e(v), glass on glass               | speed ratios, rest positions                   |
+| `cut`                 | Off the ramp into a still marble 0.3 m away, offset for 30° and 45° cuts                                                                       | μBB, glass on glass                | departure angles, speed ratios, rest positions |
+| `bank`                | Off the ramp at 45° into a wall                                                                                                                | (wall e and μ, later)              | bank angle, rest position                      |
+| `hole`                | Off the ramp at the hole, dead centre and offset by 0.8 and 1.0 of its radius. Keep the rim in frame, at 240 fps                               | the rim's restitution and friction | capture                                        |
+| `flick`               | A real finger flick, centred, of each marble size at a soft and a hard setting. Track the fingertip too: its speed at contact is `fingerSpeed` | the finger's mass and restitution  | (fit only)                                     |
 
 ### Filming for an accurate launch
 
@@ -71,9 +71,10 @@ pnpm kpb score packages/testkit/kpb/filmed-v1.json --params fitted.json --strict
 1. μR and Cd;
 2. μS;
 3. e(v) and μBB together;
-4. the finger.
+4. the rim's restitution and friction, from the hole shots, using each track up to 0.15 s after the marble reaches the rim;
+5. the finger.
 
-**Reading the errors.** They are cluster-robust over recordings. With few recordings, read them with Student's t at (recordings − 1) degrees of freedom; `t3()` in `tools/kpb/src/fit.ts` gives the ±3σ-equivalent factor.
+**Reading the errors.** They are cluster-robust over recordings. With few recordings, read them with Student's t at (recordings − 1) degrees of freedom; `t3()` in `tools/kpb/src/fit.ts` gives the ±3σ-equivalent factor. The rim's error is only as good as the repeats' natural variation: on data with almost none it understates the error (`kpb.md`).
 
 **The score.** A metric passes when the RMS of simulated minus filmed, over the repeats, is at most 1.5 times the filmed repeats' own scatter.
 

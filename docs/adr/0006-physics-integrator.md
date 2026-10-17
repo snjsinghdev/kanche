@@ -41,6 +41,9 @@ Chosen option: **fixed-step RK4 with exact events**. It is fourth-order accurate
    - Inside a step, each marble's trial is a run of RK4 substeps, each stored as a cubic Hermite piece.
    - Internal events are found as roots of probe functions on those pieces, by Illinois regula falsi with a bisection fallback. The internal events are: Coulomb stops, spin stops, table breakpoints, terrain cells, the hole's regions, support hand-overs, take-off, rolling slip, leaving the court, and the release of a held contact.
    - Contacts are found on the same pieces by conservative advancement (gap ÷ a Bernstein bound on the closing speed), with an escape step for grazes and a Newton polish of at most 1 ns.
+   - **Marble pairs come from the prompt's sort-and-sweep broadphase.** Each trial's bounding box is sorted by its lower x, with ties broken by id, and the sweep stops at the first box beyond.
+     - A pair is searched when its boxes overlap and at least one of its marbles moves, always with the lower index first. So the earliest event doesn't depend on the order.
+     - Until the PR #2 review, every pair with overlapping boxes was searched instead, an undocumented deviation. Restoring the sweep changed no outcome: the goldens and the break's hash and substep count are the same.
    - The static search runs per surface: a block (its top, edges and corners), a wall, or the ground. The nearest-feature gap is continuous within a surface but jumps between surfaces.
    - A touching contact closing at a rounding rate (under 10⁻¹² m/s) that stays within `gapTol` over the piece is rounding, not a contact.
    - The substep holding an event is re-integrated from its start to the event time, so **every event state is an RK4 state**.
@@ -86,6 +89,7 @@ Chosen option: **fixed-step RK4 with exact events**. It is fourth-order accurate
 
 - **KPB 1–8** (`test/kpb/analytic.test.ts`), **9–12** (`integrity.test.ts`, 1,000 shots, or 10,000 with `KANCHE_KPB_SHOTS`), **13** (`determinism.test.ts` and `pnpm harness`), and **16** (`performance.test.ts`, plus `scripts/bench.ts` in CI with a 60 ms regression ceiling).
 - The locality test and the fuzz suite (`fuzz.test.ts`).
+- The broadphase: the 200 golden replays, the 1,000 seeded harness shots and the break's hash (`b2396155f54ebc61`, 6,182 substeps) are the same under the sweep as under the all-pairs search it replaced.
 - The coverage gate: 96% statements, 92% branches.
 
 ## Pros and cons of the options

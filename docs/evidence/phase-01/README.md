@@ -103,6 +103,31 @@ The break went from 38 ms to 21 ms (12,488 substeps to 6,004) when commits becam
 
 A survey script (kept out of the repository; the suites check the same properties) over `randomShot(i·7919 + 1)` for i < 1,000, with keyframes: worst ledger 6.5e-10 (shot 575), worst marble overlap 5.5e-13 m, worst feature overlap 1.2e-10 m, no caps, no errors, 3.3 ms per shot on average (71.5 ms at most), and at most 43 events in a shot.
 
+## The retrofit (2026-10-17 and 18)
+
+After the owner's review, the branch closed the Phase 1 gaps and CodeRabbit's eleven comments (`handoff/phase-01.md`). No outcome changed. Each commit passed `pnpm verify` on its own staged tree, and on the combined tree:
+
+```text
+packages/physics, vitest --coverage   17 files, 260 tests pass; 96.3% statements, 91.8% branches, 99.1% functions, 97.1% lines
+tools/kpb, vitest                      6 files, 49 tests pass
+pnpm e2e                               28 passed, 2 skipped (the footage test runs in Chromium only)
+pnpm harness                           PASS: all 5 engines agree (0e4d48c50528e812/727cc953980357c6/67369b3e26944067)
+```
+
+- **The harness hashes are the ones above,** so restoring the sort-and-sweep broadphase changed nothing. The break still hashes `b2396155f54ebc61` in 6,182 substeps.
+- **KPB 8** passes at 4.9° (9.5 mm on 8 mm) and 9.1° (11 mm on 8 mm).
+- **The synthetic dataset was regenerated** with the rim's truth (e = 0.4, μ = 0.25). `kpb15-synthetic.json` is rewritten from it: the true and fitted coefficients pass 48 of 48, v1 35 of 48, and there are 15 estimates.
+- **The rim fit, from tracking noise alone:**
+
+  | Fit                                      | edge.e          | edge.mu         |
+  | ---------------------------------------- | --------------- | --------------- |
+  | Full calibration, 5 repeats              | 0.4083 ± 0.0010 | 0.2534 ± 0.0051 |
+  | Full calibration, 2 repeats (the test's) | 0.4036 ± 0.0024 | 0.2484 ± 0.0025 |
+  | The rim alone, from v1's 0.5 and 0.3     | 0.3931 ± 0.0006 | 0.2387 ± 0.0042 |
+  | The starter set, with natural variation  | 0.420 ± 0.026   | 0.255 ± 0.006   |
+
+  Without variation, e lands up to 11σ from the truth, so the noise-only test holds the rim to 5%. With variation, both are within 1σ.
+
 ## A fresh clone
 
 `git clone --branch phase-01-physics-core` of `3c7cf00` into a scratch folder, with Deno on PATH:
