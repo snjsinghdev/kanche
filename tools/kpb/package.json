@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/kpb",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The KPB reality suite: the dataset format, Tracker import, metric extraction, coefficient fits and the scorer.",
+  "scripts": {
+    "kpb": "node src/cli.ts",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kanche/physics": "workspace:*"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

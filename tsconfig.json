@@ -35,6 +35,9 @@
       "path": "./tools/physics-lab"
     },
     {
+      "path": "./tools/kpb"
+    },
+    {
       "path": "./apps/client"
     }
   ]

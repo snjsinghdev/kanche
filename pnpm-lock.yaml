@@ -307,6 +307,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testkit
 
+  tools/kpb:
+    dependencies:
+      '@kanche/physics':
+        specifier: workspace:*
+        version: link:../../packages/physics
+    devDependencies:
+      '@kanche/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+
   tools/physics-lab:
     dependencies:
       '@kanche/physics':
