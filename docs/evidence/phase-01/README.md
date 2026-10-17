@@ -93,6 +93,33 @@ OnePlus CPH2467 (Snapdragon 695, Android 15), Chrome 155: median 29.6 ms, fastes
 
 The break went from 38 ms to 21 ms (12,488 substeps to 6,004) when commits became local (`192a24e`), measured within minutes of each other. The five fixes in `6e409e8` cost about 6% (6,182 substeps). The machine itself varies by about 10% across the day: the previous commit measured 20.8 ms earlier and 23.3 ms here.
 
+### The first optimisation, for Gate 6 (2026-10-18)
+
+Three commits (`1df2705`, `66707b6`, `376210f`) that change no result. After each edit, the break's hash and substeps, all 200 golden replays and 300 random shots (`randomShot(i·7919 + 1)`) were checked against the baseline `0d03e7e`: none differed.
+
+The Unity editor was running on this machine throughout, at a load average of 4–7, and separate runs of the baseline varied from 24 to 46 ms. So the speed-ups are measured interleaved: the baseline and the working tree are loaded into one Node process and alternate shot by shot, and the figure is the median of the per-pair ratios.
+
+```text
+load average: 6.56, 6.90, 5.24
+break: base 32.64 ms, new 25.34 ms, median speed-up 1.308x (400 pairs; hashes equal)
+lone1: base 12.43 ms, new 9.12 ms, median speed-up 1.358x (200 pairs; hashes equal)
+lone16: base 27.73 ms, new 16.13 ms, median speed-up 1.791x (200 pairs; hashes equal)
+```
+
+`lone1` is one marble rolling alone on open cement for 4,005 steps; `lone16` is the same with fifteen marbles resting nearby. The lone marble costs about 1.8 µs a step at the baseline, of which the physics itself (the rolling derivative and RK4's arithmetic) is about a fifth in the profile; the rest is the engine's bookkeeping.
+
+The changes:
+
+- the broadphase order is kept between searches and updated by insertion sort;
+- boxes are found through a slot map, not `indexOf`;
+- the event search fills one reused object instead of allocating per candidate;
+- the step loop, the commits and the hold sweep use plain loops, not closures;
+- `finishState` builds its error message only on failure;
+- array lengths are written only when they change, and the rolling-segment probes read no index outside the array;
+- the hold multipliers are cleared with a loop, not `fill`.
+
+The OnePlus wasn't attached, so the phone figure is still the 29.6 ms above.
+
 ## The Physics Lab
 
 - `pnpm lab tools/physics-lab/scenarios/{roll-out,bank,hole,break}.json` writes `events.json`, `ledger.json` and `timeline.csv`. Every ledger closes to 1e-14 or better (the worst is −3.1e-15, the bank shot).

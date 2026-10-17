@@ -79,6 +79,13 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
   - on the i7-5600U laptop, 8.2 × 25.0 / 29.6 (the measured laptop-to-phone ratio) ≈ **6.9 ms**.
 - **Today** the break takes 29.6 ms and 25.0 ms, so about 3.6× is needed. With a faster candidate (about 420–440), the OnePlus target would be about 9.5 ms.
 
+**Reached so far (2026-10-18): 1.31× of the 3.6× needed.**
+
+- Three commits (`1df2705`, `66707b6`, `376210f`) remove overhead without changing a single result: the break's hash and substeps, the 200 golden replays and 300 random shots are identical (ADR-0006, `evidence/phase-01/`).
+- On the laptop that is about 19 ms (25.0 ÷ 1.31), against the 6.9 ms proxy. The OnePlus has not been re-measured: it was not attached.
+- **The changes that keep results identical are used up.** What remains is spread thinly across the engine, and the two levers the handoff named are smaller than it estimated: probe reuse is worth about 3%, and the derivative at a substep's end is already reused as the next one's first stage.
+- Going further means changing results: a restructured hot path (typed arrays), frozen directions kept across steps, fewer impact steps. That is a different integrator from the one ADR-0006 describes, so it goes back to the owner (`handoff/phase-01.md`).
+
 **Gate 5, scope: log planned versus actual time and every design change; if this phase ran more than 50% over plan, log the matching cut.**
 
 - **Planned:** no duration was set (see Phase 0, Gate 5).

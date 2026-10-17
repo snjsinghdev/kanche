@@ -84,6 +84,7 @@ Chosen option: **fixed-step RK4 with exact events**. It is fourth-order accurate
 - Bad, because it is not fast enough.
   - The break takes about 25 ms median on an i7-5600U and 30 ms on a Snapdragon 695 phone, against 5 ms and 20 ms. KPB 16 and Gate 6 stay open.
   - About 6.7 µs per marble-step is spread thinly across RK4, probes, contact search and impacts. The next gains need a leaner hot path: typed arrays with a scoped lint exception, probe values reused between substeps, and fewer allocations. That is a decision for the owner (docs/handoff/phase-01.md).
+  - **Amendment, 2026-10-18: the first optimisation changed no outcome.** The owner chose to optimise. Three commits (`1df2705`, `66707b6`, `376210f`) made the break 1.31× faster with every result bit-identical: they remove allocations, closures, array-length writes and out-of-range reads, and keep the broadphase order between searches (`evidence/phase-01/`). Probe reuse turned out to be worth about 3%, and the end-of-substep derivative was already the next substep's first stage, so the remaining 2.8× to the Gate 6 proxy has no lever that keeps results identical. Any further change that moves results amends this ADR first.
 
 ### Confirmation
 

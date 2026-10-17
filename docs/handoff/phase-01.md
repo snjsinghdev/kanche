@@ -162,6 +162,8 @@ These are also logged under Gate 5 in `docs/gates.md`:
 ## Open issues
 
 1. **Gate 6 and KPB 16** (above). On 2026-10-18 the owner chose to optimise further (option 1). There is no reference budget phone yet, so Gate 6 stays open until one is chosen and measured.
+   - **Result so far:** 1.31× with identical results, against the 3.6× the proxy needs (`docs/gates.md`). The estimate of 2–4× in option 1 was too optimistic: two of its levers turned out small or already in place.
+   - **Back with the owner:** a results-changing rewrite of uncertain yield, or option 2 (measure the shot's outcome against playback rather than a fixed 20 ms), written as a new pass mark before anything is measured against it (Gate 9).
 2. **KPB 14:**
    - Report pooltool's ball–table slip sign error upstream (github.com/ekiefl/pooltool). That is an outward action for the owner.
    - Decide whether head-on returns should follow Mathavan (no vertical velocity) or Kanche's model. Kanche's is the more physical, so the reference would need a documented exception.
