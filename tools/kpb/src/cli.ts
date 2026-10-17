@@ -72,6 +72,13 @@ function choice<T extends string>(name: string, value: string, allowed: readonly
   return value as T;
 }
 
+/** The dataset file a command reads, named in the error when it's missing. */
+function datasetFile(command: string, args: readonly string[]): string {
+  const file = args[0];
+  if (file === undefined) throw new Error(`${command} needs a dataset file`);
+  return file;
+}
+
 function one(opts: Map<string, string[]>, name: string): string {
   const v = opts.get(name)?.[0];
   if (v === undefined) throw new Error(`missing ${name}`);
@@ -172,7 +179,7 @@ export function main(argv: readonly string[]): number {
     case 'import':
       return importCommand(opts);
     case 'fit': {
-      const d = validateDataset(readJson(args[0] ?? ''));
+      const d = validateDataset(readJson(datasetFile('fit', args)));
       const c = calibrate(d);
       for (const e of c.estimates) {
         console.log(
@@ -184,7 +191,7 @@ export function main(argv: readonly string[]): number {
       return 0;
     }
     case 'score': {
-      const d = validateDataset(readJson(args[0] ?? ''));
+      const d = validateDataset(readJson(datasetFile('score', args)));
       const paramsFile = opts.get('--params')?.[0];
       const params =
         paramsFile === undefined

@@ -58,8 +58,10 @@ describe('the KPB CLI', () => {
     expect(fitted.surfaces.tile.muR).toBeGreaterThan(0.006);
     expect(main(['score', file, '--params', overrides, '--strict'])).toBe(0);
     expect(main(['score', file, '--strict'])).toBe(1);
-    // A switch never swallows the argument after it.
+    // A switch never swallows the argument after it, and a missing dataset is named as such.
     expect(main(['score', '--strict', file])).toBe(1);
+    expect(() => main(['score', '--strict'])).toThrow(/score needs a dataset file/);
+    expect(() => main(['fit'])).toThrow(/fit needs a dataset file/);
   }, 120_000);
 
   it('refuses bad import arguments before reading anything', () => {
