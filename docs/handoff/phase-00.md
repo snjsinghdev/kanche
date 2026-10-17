@@ -63,7 +63,7 @@ Node 24.22.0 · pnpm 12.11.2 · TypeScript 6.0.3 · Turborepo 2.11.7 · ESLint 1
 | A fresh clone passes `pnpm install && pnpm verify`                               | ✅ A fresh `git clone` in the scratchpad: install 27.5 s, `pnpm verify` exit 0 in 1 min 47 s (2026-10-17)                                                                                  |
 | The determinism lint fails on a `Math.sin` fixture in packages/physics           | ✅ `kanche/no-banned-math`, exit 1; tested in `pnpm test`                                                                                                                                  |
 | The harness reports identical hashes in Chromium, WebKit, Firefox, Node and Deno | ✅ `0e4d48c50528e812` in all five, locally and in CI (run 39018350863)                                                                                                                     |
-| The Android debug build installs on a low-end phone and shows the canvas         | ✅ On the low-end **emulator** stand-in (API 30, 720×1280, 2 GB); see open issue 4 for the physical phones                                                                                 |
+| The Android debug build installs on a low-end phone and shows the canvas         | ✅ On the low-end **emulator** stand-in (API 30, 720×1280, 2 GB) and on the owner's OnePlus (Android 15), with screenshots of both. No physical low-end phone (open issue 4)               |
 | `docs/handoff/phase-00.md`                                                       | ✅ This file                                                                                                                                                                               |
 | A PR titled "Phase 00 — Foundations" is open with CodeRabbit feedback resolved   | ⏳ [PR #1](https://github.com/snjsinghdev/kanche/pull/1) is open with CI green. CodeRabbit can't review until the owner installs the CodeRabbit app on `snjsinghdev/kanche` (open issue 1) |
 
@@ -77,6 +77,10 @@ Node 24.22.0 · pnpm 12.11.2 · TypeScript 6.0.3 · Turborepo 2.11.7 · ESLint 1
   - `android-debug` 1 min 21 s: APK 4.74 MiB of 30 MiB
 - **iOS (`ios.yml`, run 39018138826):** `** BUILD SUCCEEDED **` on `macos-26` with Xcode 26.6 (iPhoneSimulator 26.5 SDK), unsigned, in 53 s. The `ios` label was then removed so pushes don't re-run it.
 - **The nightly** can't be dispatched until `nightly.yml` is on `main` (GitHub resolves dispatch from the default branch). It runs for the first time after merge.
+
+## Found on a real device
+
+The owner's phone showed a native action bar titled "Kanche" over the game: `EdgeToEdge.enable` ran before `BridgeActivity` set `AppTheme.NoActionBar`. Moving the call after `super.onCreate()` fixed it, but on Android 11 the insets then arrived after the first layout and nothing re-laid out. A `ResizeObserver` on the safe-area probe now handles any inset change, with an e2e test that fails without it. **Lessons for later phases:** check every native change on both an old (API 30) and a new (Android 15) device, and never assume the insets are final at load.
 
 ## Deviations from the approved plan
 
@@ -94,7 +98,7 @@ Node 24.22.0 · pnpm 12.11.2 · TypeScript 6.0.3 · Turborepo 2.11.7 · ESLint 1
 1. **CodeRabbit isn't installed** on the account. The owner adds the repository in the CodeRabbit GitHub app. Its first review then runs on the open PR, and its feedback must be resolved before merge.
 2. **Required checks can't be enforced.** GitHub's Free plan refuses branch protection on private repositories (HTTP 403). Run `tools/scripts/require-checks.sh` once the repository is public or on Pro. Until then: never merge with a red check.
 3. **iOS** is generated and synced on Linux but can only be built on macOS. The on-demand `ios-simulator` job (`ios.yml`) builds it unsigned. Device runs need signing (Phase 11).
-4. **Physical low-end phone:** no low-end device is available here. The API 30 emulator stands in, and its numbers are provisional. The debug APK **installed on the owner's OnePlus CPH2467** (`adb install -r`: `Success`; package present). The phone was asleep when the app was launched, so the canvas wasn't visually confirmed there. Take a screenshot once the phone is unlocked.
+4. **Physical low-end phone:** no low-end device is available here. The API 30 emulator stands in, and its numbers are provisional. The owner's OnePlus CPH2467 (Android 15, mid-range) runs the build: crisp integer 4× inside the safe area. On that phone the build found two bugs, both fixed and recorded in `docs/evidence/phase-00/README.md`: an action bar caused by the order of the edge-to-edge call, and no relayout when the insets change.
 5. **Supabase local stack:** there's no Docker on this machine, so `supabase start` and `supabase test db` don't run here. Phase 6 needs Docker or a hosted dev project, and must also check that `functions deploy` bundles the core imported from `../../packages` (ADR-0005).
 6. **WebKit on this machine** runs only because of the no-sudo library copy in `docs/setup.md`. A new Playwright WebKit revision needs it again.
 7. **Old WebViews:** below 111, the app shows a blank page (ADR-0002). The feature-detecting "update WebView" page and a CSP (PixiJS needs `pixi.js/unsafe-eval` under a strict `script-src`) are Phase 11 items.

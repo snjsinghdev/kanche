@@ -63,6 +63,22 @@ test.describe('the Phase 0 canvas', () => {
     await expect(page.locator('canvas')).toHaveAttribute('data-scale', String(4 * dpr));
   });
 
+  test('re-lays out when the safe area changes without a resize event', async ({ page }) => {
+    await page.setViewportSize({ width: 540, height: 960 });
+    await ready(page);
+    const canvas = page.locator('canvas');
+    await expect(canvas).toHaveAttribute('data-mode', 'integer');
+    // What Capacitor's SystemBars plugin does when the insets arrive after the first layout.
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--safe-area-inset-top', '48px');
+    });
+    // 912 px tall leaves fit 1.9: integer 1x would fill 53%, so the canvas goes sharp.
+    await expect(canvas).toHaveAttribute('data-mode', 'sharp');
+    const box = await canvas.boundingBox();
+    expect(box?.y).toBeGreaterThanOrEqual(48 - 1);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(960 + 1);
+  });
+
   test('shows no words on screen (wordless first)', async ({ page }) => {
     await ready(page);
     expect((await page.locator('body').innerText()).trim()).toBe('');

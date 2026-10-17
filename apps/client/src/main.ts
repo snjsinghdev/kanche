@@ -3,7 +3,7 @@ import { rulesVersion } from '@kanche/rules';
 import { Application, Rectangle, TextureSource } from 'pixi.js';
 
 import { PALETTE } from './palette.ts';
-import { readSafeAreaInsets } from './safe-area.ts';
+import { readSafeAreaInsets, safeAreaProbe } from './safe-area.ts';
 import { buildScene } from './scene.ts';
 import { BASE_HEIGHT, BASE_WIDTH, computeViewport, type Viewport } from './viewport.ts';
 
@@ -72,6 +72,9 @@ async function start(): Promise<void> {
   window.addEventListener('resize', relayout);
   window.visualViewport?.addEventListener('resize', relayout);
   screen.orientation.addEventListener('change', relayout);
+  // Safe-area insets can change without a resize event (they arrive late on Android 11, and
+  // change with split screen or the navigation mode). The probe's box changes with them.
+  new ResizeObserver(relayout).observe(safeAreaProbe());
 
   if (import.meta.env.MODE !== 'production') {
     const { installTestHook } = await import('./test-hook.ts');
