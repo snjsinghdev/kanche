@@ -1,0 +1,26 @@
+# Dependencies and caches
+node_modules/
+.pnpm-store/
+.turbo/
+*.tsbuildinfo
+
+# Build output
+dist/
+dist-e2e/
+dist-types/
+coverage/
+playwright-report/
+test-results/
+tools/determinism/report.json
+
+# Env files: only the examples are committed (docs/setup.md)
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

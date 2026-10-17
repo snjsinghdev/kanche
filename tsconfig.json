@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/testkit" },
+    { "path": "./packages/physics" },
+    { "path": "./packages/rules" },
+    { "path": "./packages/ai" },
+    { "path": "./packages/protocol" },
+    { "path": "./packages/content" },
+    { "path": "./packages/marble-gen" },
+    { "path": "./tools/eslint-plugin-kanche" },
+    { "path": "./tools/determinism" },
+    { "path": "./tools/budgets" },
+    { "path": "./apps/client" }
+  ]
+}

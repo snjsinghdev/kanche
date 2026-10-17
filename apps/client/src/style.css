@@ -1,0 +1,39 @@
+:root {
+  --letterbox: #1c140d;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--letterbox);
+  /* The game owns every touch: no scrolling, zooming or pull-to-refresh. */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#app canvas {
+  position: absolute;
+  display: block;
+}
+
+/* Measures the safe area in CSS pixels (src/safe-area.ts). */
+.safe-area-probe {
+  position: fixed;
+  visibility: hidden;
+  pointer-events: none;
+  inset: 0;
+  padding-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  padding-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  padding-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+}

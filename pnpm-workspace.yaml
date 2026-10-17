@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+  - supabase
+
+# Exact versions only (ADR-0001).
+savePrefix: ''
+
+# Supply-chain rule (ADR-0001): no dependency version younger than 7 days.
+minimumReleaseAge: 10080
+
+# The Node and pnpm versions in package.json "engines" are pins, not hints.
+engineStrict: true
+
+# Install scripts are off unless listed (pnpm default). esbuild verifies its native binary.
+allowBuilds:
+  esbuild: true

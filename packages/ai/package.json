@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The neighbourhood kids: physics-search AI. Deterministic; the server re-runs it in for-keeps matches.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

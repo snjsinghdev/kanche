@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // DOM for the code that runs inside Playwright pages; Node for the runner.
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "outDir": "dist/types",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
+  "references": [
+    { "path": "../../packages/physics/tsconfig.lib.json" },
+    { "path": "../../packages/testkit" }
+  ]
+}

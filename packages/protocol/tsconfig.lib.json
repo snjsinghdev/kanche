@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Simulation code sees the ECMAScript library only: no DOM, no Node, no timers.
+    // `window`, `document` and `setTimeout` are type errors here (ADR-0004).
+    "lib": ["ES2023"],
+    "types": [],
+    "rootDir": "src",
+    "outDir": "dist/lib",
+    "tsBuildInfoFile": "dist/lib.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"]
+}
