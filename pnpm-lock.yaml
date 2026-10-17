@@ -239,6 +239,9 @@ importers:
       '@capacitor/cli':
         specifier: 8.5.3
         version: 8.5.3
+      '@kanche/kpb':
+        specifier: workspace:*
+        version: link:../../tools/kpb
       '@kanche/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit

@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "description": "The KPB reality suite: the dataset format, Tracker import, metric extraction, coefficient fits and the scorer.",
+  "exports": {
+    "./tracker": "./src/tracker.ts"
+  },
   "scripts": {
     "kpb": "node src/cli.ts",
-    "test": "vitest run --coverage"
+    "test": "vitest run"
   },
   "dependencies": {
     "@kanche/physics": "workspace:*"

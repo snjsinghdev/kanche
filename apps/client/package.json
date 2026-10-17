@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",
+    "@kanche/kpb": "workspace:*",
     "@kanche/testkit": "workspace:*",
     "vite": "8.3.4"
   }

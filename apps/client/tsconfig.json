@@ -16,8 +16,17 @@
     "capacitor.config.ts"
   ],
   "references": [
-    { "path": "../../packages/physics/tsconfig.lib.json" },
-    { "path": "../../packages/rules/tsconfig.lib.json" },
-    { "path": "../../packages/testkit" }
+    {
+      "path": "../../packages/physics/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/rules/tsconfig.lib.json"
+    },
+    {
+      "path": "../../tools/kpb"
+    },
+    {
+      "path": "../../packages/testkit"
+    }
   ]
 }

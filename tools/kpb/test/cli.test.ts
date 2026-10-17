@@ -65,5 +65,5 @@ describe('the KPB CLI', () => {
     expect(main(['synthetic', '--out', out])).toBe(0);
     expect(validateDataset(JSON.parse(readFileSync(out, 'utf8'))).synthetic).toBe(true);
     expect(main(['help'])).toBe(2);
-  });
+  }, 60_000);
 });

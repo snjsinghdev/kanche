@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vite';
 
 /**
@@ -6,7 +8,9 @@ import { defineConfig } from 'vite';
  */
 export const BUILD_TARGET = ['chrome111', 'edge111', 'firefox114', 'safari16.4', 'ios16.4'];
 
-export default defineConfig({
+const page = (name: string): string => fileURLToPath(new URL(name, import.meta.url));
+
+export default defineConfig(({ mode }) => ({
   // .env.example and .env.local live at the repository root.
   envDir: '../..',
   build: {
@@ -15,6 +19,14 @@ export default defineConfig({
     sourcemap: 'hidden',
     // The canvas app has a single entry; lazy chunks are Pixi's environment extensions.
     chunkSizeWarningLimit: 600,
+    // The Physics Lab (lab.html) is a developer tool: dev, debug and e2e builds only, never the
+    // production bundle or its budget (ADR-0006).
+    rollupOptions: {
+      input:
+        mode === 'production'
+          ? { index: page('index.html') }
+          : { index: page('index.html'), lab: page('lab.html') },
+    },
   },
   server: { host: true },
-});
+}));
