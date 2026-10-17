@@ -132,3 +132,15 @@ The owner's phone showed a native action bar titled "Kanche" over the game: `Edg
 - **`noUncheckedIndexedAccess` with typed arrays** makes every indexed read `number | undefined`. `?? 0` adds uncovered branches, and non-null assertions are lint errors. The probe avoids indexing by iterating objects and pre-built pairs. For hot loops over `Float64Array`, decide the idiom in an ADR, e.g. a checked accessor, or a scoped lint exception for `@typescript-eslint/no-non-null-assertion` in `packages/physics/src/sim/**`.
 - **The KPB reality suite** needs 240 fps footage of real marbles on five surfaces. That's a physical task for the owner, and it's on the critical path for calibration.
 - The reference suite compares against pooltool (Python). Run it as a dev tool, not a dependency, and commit its outputs as golden data with the script that produced them.
+
+## Gates retrofit (2026-10-17, branch `phase-00-gates`)
+
+The prompt pack was updated after Phase 0 merged. It added ten phase gates (`docs/gates.md`), and gave Phase 0 exit gates that must pass before Phase 1 starts. Phase 1 had already been built (PR #2, now a draft). This branch adds what Phase 0 owed:
+
+- **`docs/gates.md`:** the ten gates, a log table, the Gate 9 pass marks for Gates 1, 2, 7 and 8 with the stop rule, and the planned durations (Gate 5). The pass marks and durations are drafts for the owner to confirm.
+- **`docs/legal/questions.md`:** the Gate 3 questions for an Indian lawyer, for the owner to send.
+- **ADR-0002, amended:** the reference budget phone's criteria and candidates. The phone is not chosen yet (Gate 6, the owner's choice). The amendment also gives frame budgets per device tier from the Kanche Visual Benchmark v1, replacing the 30 fps p95 target.
+- **`budgets.json` and `tools/budgets`:** a `frames` section, and `pnpm budgets --frames <report.json>` to check a device's frame report.
+- **`CLAUDE.md`:** three non-negotiables from the updated Phase 0 prompt (gates block phases, Gate 3, visual quality is measured); a gate check in the workflow's first and fifth steps; and the frame budgets in `apps/client/CLAUDE.md`.
+
+Gates 9, 3, 6 and 5 stay **open** until the owner confirms the pass marks and durations, sends the legal questions, and chooses the reference phone. Until then Phase 1 cannot be accepted.

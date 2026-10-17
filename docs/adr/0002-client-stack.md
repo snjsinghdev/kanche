@@ -63,7 +63,7 @@ What else is decided:
 
 - Good, because the whole game stays in TypeScript and the web build is the link player.
 - Good, because the Phase 0 initial JS is 131.9 KiB gzip and the debug APK is 4.74 MiB. That leaves room in the 30 MB budget for art and audio.
-- Bad, because WebView performance and audio latency must be measured, not assumed (Phase 3: 30 fps p95, clack ≤ 50 ms). A native audio fallback is the escape hatch.
+- Bad, because WebView performance and audio latency must be measured, not assumed (Phase 3: the frame budgets below, clack ≤ 50 ms). A native audio fallback is the escape hatch.
 - Bad, because the scene graph, UI glue and input are ours to build. Phaser would have given them.
 
 ### Confirmation
@@ -89,6 +89,37 @@ What else is decided:
 - Good, because it's native and fast.
 - Bad, because the web link player would be a second codebase, and there's no shared physics with a Deno server without bridging.
 
+## Amendment, 2026-10-17: the reference phone and frame budgets
+
+The updated prompt pack's Phase 0 exit gates (`docs/gates.md`) ask for two things here: the reference budget phone (Gate 6), and frame-time budgets per device tier in `budgets.json`.
+
+**The reference budget phone is not chosen yet.** It is the owner's choice: the cheapest Android phone Kanche targets. Every "on the reference phone" test then runs on it: Gate 1's fun test, Gate 6's physics break, and the frame budgets. The criteria:
+
+- on sale new in India, at the bottom of the market (about ₹6,000–7,500 in October 2026);
+- 4 GB of RAM;
+- one of the weak SoCs common at that price (Unisoc T606/T612/T7250 or MediaTek Helio G85);
+- Android 14 or later, so the WebView updates past the floor of 111.
+
+Candidates listed by Indian price trackers in October 2026, to be checked for stock and price before buying:
+
+- Moto G04 (Unisoc T606, about ₹6,999);
+- POCO C71 (Unisoc T7250, about ₹6,799);
+- Samsung Galaxy F05 (Helio G85, about ₹6,499, reported out of stock);
+- realme C61 (Unisoc T612, about ₹7,249).
+
+The agent's suggestion is the slowest one in stock, likely a T606 phone. Record the model here once chosen. Until then the API 30 emulator and the owner's OnePlus CPH2467 (mid-range) stand in, and no reference-phone gate can pass.
+
+**Frame budgets per device tier** come from the Kanche Visual Benchmark v1 (the prompt pack's `VISUAL-BENCHMARK.md`). They replace the 30 fps p95 target above:
+
+| Tier            | Frames within 16.7 ms | Worst frame during a shot |
+| --------------- | --------------------- | ------------------------- |
+| Reference phone | at least 95%          | 50 ms                     |
+| Mid-range       | at least 99%          | 33 ms                     |
+
+- They are `budgets.json`'s `frames` section.
+- `pnpm budgets --frames <report.json>` checks a device's frame report against them. Phase 3 writes the session that produces those reports.
+- Raising a frame budget needs an ADR, like any other budget.
+
 ## More information
 
-Revisit when a low-end device misses 30 fps p95 or 50 ms audio (Phase 3), when Capacitor 9 ships (remove the `EdgeToEdge` call from `MainActivity`; it makes the call itself), or when store data shows real users below WebView 111.
+Revisit when the reference phone misses its frame budget or 50 ms audio (Phase 3), when Capacitor 9 ships (remove the `EdgeToEdge` call from `MainActivity`; it makes the call itself), or when store data shows real users below WebView 111.

@@ -78,12 +78,12 @@ Three walls enforce the boundaries:
 
 ### Tooling (`tools/`)
 
-| Tool                        | Purpose                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `eslint-plugin-kanche`      | Determinism rules, tested both ways, plus a gate test that lints the `Math.sin` fixture with the real config |
-| `determinism`               | Bundles one ESM file and runs it in 5 engines; the hashes must match                                         |
-| `budgets`                   | `budgets.json` checks: initial JS gzip, art, audio, Android download                                         |
-| `scripts/require-checks.sh` | Makes CI jobs required checks (needs a public repo or GitHub Pro)                                            |
+| Tool                        | Purpose                                                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `eslint-plugin-kanche`      | Determinism rules, tested both ways, plus a gate test that lints the `Math.sin` fixture with the real config            |
+| `determinism`               | Bundles one ESM file and runs it in 5 engines; the hashes must match                                                    |
+| `budgets`                   | `budgets.json` checks: initial JS gzip, art, audio, Android download, frame times per device tier (from device reports) |
+| `scripts/require-checks.sh` | Makes CI jobs required checks (needs a public repo or GitHub Pro)                                                       |
 
 ## 4. Quality gates in CI
 
