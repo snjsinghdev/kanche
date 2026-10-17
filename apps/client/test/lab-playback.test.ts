@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PARAMS_V1, simulateShot, type MarbleTimeline } from '@kanche/physics';
 
-import { frame, sampleAt, trail } from '../src/lab/playback.ts';
+import { frame, parseRect, sampleAt, trail, videoTime } from '../src/lab/playback.ts';
 import { SCENARIOS } from '../src/lab/scenarios.ts';
 
 const R = PARAMS_V1.radius.r80;
@@ -47,5 +47,31 @@ describe('the lab playback', () => {
     for (const setup of Object.values(SCENARIOS)) {
       expect(simulateShot(setup, { timeline: false }).events.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('the footage overlay', () => {
+  it('reads the frame rectangle from any two opposite corners', () => {
+    expect(parseRect('-0.5, -0.25, 1.5, 0.75')).toEqual({
+      xMin: -0.5,
+      xMax: 1.5,
+      yMin: -0.25,
+      yMax: 0.75,
+    });
+    expect(parseRect('1,1,0,0')).toEqual({ xMin: 0, xMax: 1, yMin: 0, yMax: 1 });
+  });
+
+  it.each(['1,2,3', '1,2,3,4,5', '0,0,0,1', 'a,b,c,d', '0,0,Infinity,1'])(
+    'refuses "%s"',
+    (text) => {
+      expect(() => parseRect(text)).toThrow();
+    },
+  );
+
+  it('maps shot time to video time inside the clip', () => {
+    expect(videoTime(0.5, 1.25, 10)).toBe(1.75);
+    expect(videoTime(0.5, -2, 10)).toBe(0);
+    expect(videoTime(9.5, 1, 10)).toBe(10);
+    expect(videoTime(3, 0, NaN)).toBe(3);
   });
 });

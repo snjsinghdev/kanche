@@ -2,7 +2,8 @@
  * The Physics Lab route (lab.html; Phase 1 prompt, "Physics Lab"). Built only in dev, debug and
  * e2e modes (vite.config.ts), never in the production bundle. It plays a shot back with its
  * velocity, slip and spin vectors, trails and live values; runs it again with a second parameter
- * set (B, overrides of v1) on top; and overlays a track exported from Tracker.
+ * set (B, overrides of v1) on top; and overlays a track exported from Tracker and the overhead
+ * footage it came from, kept in step with the playback.
  */
 import {
   buildCourt,
@@ -16,7 +17,7 @@ import {
 } from '@kanche/physics';
 import { parseTrackerCsv } from '@kanche/kpb/tracker';
 
-import { frame, sampleAt, trail, type Bounds } from './playback.ts';
+import { frame, parseRect, sampleAt, trail, videoTime, type Bounds } from './playback.ts';
 import { SCENARIOS } from './scenarios.ts';
 
 /** Arrow length per unit: an arrow shows where the vector would carry the marble in 0.1 s. */
@@ -37,6 +38,8 @@ interface LabHook {
     b: { hash: string; duration: number } | null;
   };
   overlayPoints(): number;
+  /** Whether footage is loaded and has a frame to draw. */
+  videoReady(): boolean;
   error(): string;
 }
 
@@ -68,6 +71,12 @@ const colour = (name: string): string => css.getPropertyValue(name).trim();
 let a: Run | null = null;
 let b: Run | null = null;
 let overlay: { x: number[]; y: number[]; t0: number; fps: number } | null = null;
+const footage = document.createElement('video');
+footage.muted = true;
+footage.preload = 'auto';
+let footageUrl: string | null = null;
+const videoRectBox = $('videoRect', HTMLInputElement);
+const videoOffsetBox = $('videoOffset', HTMLInputElement);
 let view: Bounds = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 };
 let t = 0;
 let playing = false;
@@ -185,6 +194,31 @@ function drawCourt(
   }
 }
 
+/** The footage frame for the current time, under everything else, if it is loaded. */
+function drawFootage(g: CanvasRenderingContext2D, tf: ReturnType<typeof transform>): void {
+  if (footageUrl === null || footage.readyState < 2) return;
+  let rect: Bounds;
+  try {
+    rect = parseRect(videoRectBox.value);
+  } catch (e) {
+    errorBox.textContent = e instanceof Error ? e.message : String(e);
+    return;
+  }
+  const want = videoTime(t, Number(videoOffsetBox.value) || 0, footage.duration);
+  // Seek only when the shown frame is more than half a 60 fps frame away; 'seeked' redraws.
+  if (!footage.seeking && Math.abs(footage.currentTime - want) > 1 / 120)
+    footage.currentTime = want;
+  g.globalAlpha = 0.6;
+  g.drawImage(
+    footage,
+    tf.sx(rect.xMin),
+    tf.sy(rect.yMax),
+    tf.k * (rect.xMax - rect.xMin),
+    tf.k * (rect.yMax - rect.yMin),
+  );
+  g.globalAlpha = 1;
+}
+
 function drawRun(
   g: CanvasRenderingContext2D,
   r: Run,
@@ -269,6 +303,7 @@ function draw(): void {
   g.fillRect(0, 0, w, h);
   if (a === null) return;
   const tf = transform();
+  drawFootage(g, tf);
   drawCourt(g, a.setup, tf);
   drawOverlay(g, tf);
   if (b !== null) drawRun(g, b, colour('--b'), tf);
@@ -362,6 +397,20 @@ canvas.addEventListener('pointermove', (e) => {
 canvas.addEventListener('pointerup', () => {
   drag = null;
 });
+$('video', HTMLInputElement).addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file === undefined) return;
+  if (footageUrl !== null) URL.revokeObjectURL(footageUrl);
+  footageUrl = URL.createObjectURL(file);
+  footage.src = footageUrl;
+  footage.load();
+});
+footage.addEventListener('loadeddata', draw);
+footage.addEventListener('seeked', draw);
+footage.addEventListener('error', () => {
+  errorBox.textContent = 'the footage could not be decoded';
+});
+for (const box of [videoRectBox, videoOffsetBox]) box.addEventListener('input', draw);
 new ResizeObserver(draw).observe(canvas);
 
 load('break');
@@ -395,5 +444,6 @@ window.__kancheLab = {
     b: b === null ? null : { hash: b.result.hash, duration: b.result.duration },
   }),
   overlayPoints: () => overlay?.x.length ?? 0,
+  videoReady: () => footageUrl !== null && footage.readyState >= 2,
   error: () => errorBox.textContent,
 };

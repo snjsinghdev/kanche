@@ -89,3 +89,35 @@ export function frame(timelines: readonly MarbleTimeline[], margin = 0.05): Boun
   const pad = Math.max(margin, 0.1 * Math.max(xMax - xMin, yMax - yMin));
   return { xMin: xMin - pad, xMax: xMax + pad, yMin: yMin - pad, yMax: yMax + pad };
 }
+
+/**
+ * The world rectangle an overhead video frame covers, from "x0,y0,x1,y1" in metres: any two
+ * opposite corners. The frame is drawn upright, so the camera must be square to the court's axes.
+ */
+export function parseRect(text: string): Bounds {
+  const v = text.split(',').map((p) => Number(p.trim()));
+  const [x0, y0, x1, y1] = v;
+  if (
+    v.length !== 4 ||
+    x0 === undefined ||
+    y0 === undefined ||
+    x1 === undefined ||
+    y1 === undefined
+  ) {
+    throw new Error('the frame needs four numbers: x0,y0,x1,y1');
+  }
+  if (!v.every(Number.isFinite) || x0 === x1 || y0 === y1) {
+    throw new Error('the frame needs four finite numbers with x0 ≠ x1 and y0 ≠ y1');
+  }
+  return {
+    xMin: Math.min(x0, x1),
+    xMax: Math.max(x0, x1),
+    yMin: Math.min(y0, y1),
+    yMax: Math.max(y0, y1),
+  };
+}
+
+/** The video time that shows shot time t, kept inside the clip (s). */
+export function videoTime(t: number, offset: number, duration: number): number {
+  return Math.min(Math.max(t + offset, 0), Number.isFinite(duration) ? duration : t + offset);
+}
