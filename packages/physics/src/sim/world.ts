@@ -139,6 +139,16 @@ export class Sim {
     this.bodies = bodies;
     this.tracks = bodies.map(() => newTrack());
     this.boxes = bodies.map(() => ({ xMin: 0, xMax: 0, yMin: 0, yMax: 0, zMin: 0, zMax: 0 }));
+    this.order = bodies.map((_, i) => i);
+    bodies.forEach((b, i) => this.slots.set(b, i));
+    this.best = {
+      t: 0,
+      rank: 0,
+      a: defined(bodies[0], 'body'),
+      b: null,
+      feature: null,
+      internal: null,
+    };
     this.singletons = bodies.map((b, i) => ({
       bodies: [b],
       tracks: [defined(this.tracks[i], 'track')],
@@ -166,7 +176,8 @@ export class Sim {
   }
 
   private moving(): boolean {
-    return this.bodies.some((b) => !b.done && b.motion !== 'resting');
+    for (const b of this.bodies) if (!b.done && b.motion !== 'resting') return true;
+    return false;
   }
 
   run(): void {
@@ -182,13 +193,15 @@ export class Sim {
         return;
       }
       metrics.steps += 1;
-      const movedThisStep = this.movedThisStep;
-      this.bodies.forEach((b, i) => {
+      const { bodies, movedThisStep } = this;
+      for (let i = 0; i < bodies.length; i += 1) {
+        const b = defined(bodies[i], 'body');
         movedThisStep[i] = !b.done && b.motion !== 'resting';
-      });
+      }
       for (const group of this.groups()) {
         // A constant trial (nothing in the group moves) holds for the next step too.
-        const keep = group.tracks.every((tr) => tr.fresh);
+        let keep = true;
+        for (const tr of group.tracks) if (!tr.fresh) keep = false;
         for (const tr of group.tracks) {
           tr.start = 0;
           if (!keep) tr.fresh = false;
@@ -225,9 +238,11 @@ export class Sim {
       this.commitEveryone();
       for (const b of this.bodies) this.tidySpin(b);
       this.checkPockets();
-      this.bodies.forEach((b, i) => {
-        if (movedThisStep[i] === true) this.keyframe(b);
-      });
+      if (this.timelines !== null) {
+        for (let i = 0; i < bodies.length; i += 1) {
+          if (movedThisStep[i] === true) this.keyframe(defined(bodies[i], 'body'));
+        }
+      }
     }
   }
 
@@ -242,7 +257,9 @@ export class Sim {
     const { bodies, tracks, world } = this;
     const now = this.tau;
     const end = world.params.dt;
-    let best: Next | null = null;
+    // The candidates are offered into one reused object (`best`); nothing keeps a Next past apply.
+    const best = this.best;
+    let found = false;
     for (const group of this.groups()) {
       const lead = defined(group.tracks[0], 'track');
       let ev: InternalEvent | null = null;
@@ -262,18 +279,11 @@ export class Sim {
         for (const b of group.bodies) this.boxOf(b);
       }
       if (ev !== null) {
-        const n: Next = {
-          t: ev.t,
-          rank: RANK_INTERNAL + ev.code,
-          a: defined(ev.body, 'event marble'),
-          b: null,
-          feature: null,
-          internal: ev,
-        };
-        if (best === null || before(n, best)) best = n;
+        const a = defined(ev.body, 'event marble');
+        found = offer(best, found, ev.t, RANK_INTERNAL + ev.code, a, null, null, ev);
       }
     }
-    const limit = best === null ? end : best.t;
+    const limit = found ? best.t : end;
     // Static features, for the marbles that move.
     for (let i = 0; i < bodies.length; i += 1) {
       const b = defined(bodies[i], 'body');
@@ -283,26 +293,13 @@ export class Sim {
       if (feats.length === 0) continue;
       const hit = staticContact(world, b, track, feats, now, limit, this.hit);
       if (hit.feature !== null && hit.t <= limit) {
-        const n: Next = {
-          t: hit.t,
-          rank: RANK_STATIC,
-          a: b,
-          b: null,
-          feature: hit.feature,
-          internal: null,
-        };
-        if (best === null || before(n, best)) best = n;
+        found = offer(best, found, hit.t, RANK_STATIC, b, null, hit.feature, null);
       }
     }
     // Marble pairs, through the prompt's sort-and-sweep broadphase: the trials' boxes in order of
     // their lower x, ties broken by id. A pair is searched when its boxes overlap and one of its
     // marbles moves, always the lower index first; the earliest event does not depend on order.
-    const order = this.order;
-    order.length = 0;
-    bodies.forEach((b, i) => {
-      if (!b.done) order.push(i);
-    });
-    order.sort(this.byBox);
+    const order = this.sweepOrder();
     for (let oi = 0; oi < order.length; oi += 1) {
       const i = defined(order[oi], 'order');
       const bi = defined(this.boxes[i], 'box');
@@ -325,29 +322,51 @@ export class Sim {
         if (t <= limit) {
           const first = A.id < B.id ? A : B;
           const second = A.id < B.id ? B : A;
-          const n: Next = {
-            t,
-            rank: RANK_PAIR,
-            a: first,
-            b: second,
-            feature: null,
-            internal: null,
-          };
-          if (best === null || before(n, best)) best = n;
+          found = offer(best, found, t, RANK_PAIR, first, second, null, null);
         }
       }
     }
-    return best;
+    return found ? best : null;
   }
 
-  private readonly order: number[] = [];
+  private readonly best: Next;
+  /** The live marbles' indices in broadphase order, kept between searches (nearly sorted). */
+  private readonly order: number[];
   private readonly movedThisStep: boolean[] = [];
+  private readonly slots = new Map<Body, number>();
+
+  /**
+   * The live marbles in broadphase order: by the box's lower x, then by id, a strict total order.
+   * The last search's order is nearly sorted, so an insertion sort brings it up to date cheaply,
+   * and any correct sort gives the same order.
+   */
+  private sweepOrder(): number[] {
+    const { order, bodies } = this;
+    let live = 0;
+    for (const i of order) {
+      if (!defined(bodies[i], 'body').done) {
+        order[live] = i;
+        live += 1;
+      }
+    }
+    order.length = live;
+    for (let k = 1; k < live; k += 1) {
+      const i = defined(order[k], 'order');
+      let m = k - 1;
+      while (m >= 0 && this.byBox(defined(order[m], 'order'), i) > 0) {
+        order[m + 1] = defined(order[m], 'order');
+        m -= 1;
+      }
+      order[m + 1] = i;
+    }
+    return order;
+  }
 
   /** Broadphase order: by the box's lower x, then by id. */
-  private readonly byBox = (i: number, j: number): number => {
+  private byBox(i: number, j: number): number {
     const d = defined(this.boxes[i], 'box').xMin - defined(this.boxes[j], 'box').xMin;
     return d !== 0 ? d : defined(this.bodies[i], 'body').id - defined(this.bodies[j], 'body').id;
-  };
+  }
   /** Every marble on its own: the groups whenever nothing is held. */
   private readonly singletons: Group[];
   /** The groups while the holds stay as they are (null once they change). */
@@ -355,7 +374,7 @@ export class Sim {
 
   /** The box around a marble's whole trial (its curves' bounds grown by its radius). */
   private boxOf(b: Body): void {
-    const i = this.bodies.indexOf(b);
+    const i = defined(this.slots.get(b), 'slot');
     const track = defined(this.tracks[i], 'track');
     const box = defined(this.boxes[i], 'box');
     box.xMin = Infinity;
@@ -509,7 +528,9 @@ export class Sim {
     for (const group of this.groups()) {
       const lead = defined(group.tracks[0], 'track');
       if (!lead.fresh) continue;
-      if (group.tracks.some((tr) => tr.moving)) this.commitGroupTo(group, this.tau);
+      let moving = false;
+      for (const tr of group.tracks) if (tr.moving) moving = true;
+      if (moving) this.commitGroupTo(group, this.tau);
     }
   }
 
@@ -1546,12 +1567,37 @@ export class Sim {
 }
 
 /** Earlier event first; ties by kind rank, then lower id, then higher id. */
-function before(a: Next, b: Next): boolean {
-  if (a.t !== b.t) return a.t < b.t;
-  if (a.rank !== b.rank) return a.rank < b.rank;
-  if (a.a.id !== b.a.id) return a.a.id < b.a.id;
-  const ab = a.b === null ? -1 : a.b.id;
-  const bb = b.b === null ? -1 : b.b.id;
+/**
+ * Offer a candidate event to a search. It replaces `best` when nothing was found yet or it comes
+ * first in the order (time, kind, lower id, higher id); a tie keeps the earlier candidate.
+ * Returns that something is now found.
+ */
+function offer(
+  best: Next,
+  found: boolean,
+  t: number,
+  rank: number,
+  a: Body,
+  b: Body | null,
+  feature: StaticFeature | null,
+  internal: InternalEvent | null,
+): boolean {
+  if (found && !precedes(t, rank, a, b, best)) return true;
+  best.t = t;
+  best.rank = rank;
+  best.a = a;
+  best.b = b;
+  best.feature = feature;
+  best.internal = internal;
+  return true;
+}
+
+function precedes(t: number, rank: number, a: Body, b: Body | null, than: Next): boolean {
+  if (t !== than.t) return t < than.t;
+  if (rank !== than.rank) return rank < than.rank;
+  if (a.id !== than.a.id) return a.id < than.a.id;
+  const ab = b === null ? -1 : b.id;
+  const bb = than.b === null ? -1 : than.b.id;
   return ab < bb;
 }
 

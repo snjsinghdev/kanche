@@ -1172,18 +1172,25 @@ function finishState(world: World, body: Body, ctx: Ctx, out: Dyn): void {
     out.z = planeLevel(world, body, out.x, out.y) + body.r;
     out.vz = 0;
   }
-  assertFinite(
-    `marble ${String(body.id)} state`,
-    out.x,
-    out.y,
-    out.z,
-    out.vx,
-    out.vy,
-    out.vz,
-    out.wx,
-    out.wy,
-    out.wz,
-  );
+  // v − v is 0 for a finite v and NaN otherwise, so the sum is 0 exactly when all nine are
+  // finite. The message is built only on the failing path: this runs every substep.
+  const check =
+    out.x - out.x + (out.y - out.y) + (out.z - out.z) + (out.vx - out.vx) + (out.vy - out.vy);
+  const rest = out.vz - out.vz + (out.wx - out.wx) + (out.wy - out.wy) + (out.wz - out.wz);
+  if (check + rest !== 0) {
+    assertFinite(
+      `marble ${String(body.id)} state`,
+      out.x,
+      out.y,
+      out.z,
+      out.vx,
+      out.vy,
+      out.vz,
+      out.wx,
+      out.wy,
+      out.wz,
+    );
+  }
 }
 
 const evScratch: InternalEvent = { t: 0, code: 0, arg: 0, hold: null, body: null };
