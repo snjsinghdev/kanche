@@ -69,7 +69,7 @@ Set up the machine with `docs/setup.md` first (Node 24.22.0, pnpm via corepack, 
 5. **End the phase with a handoff note**, `docs/handoff/phase-NN.md`: what was built, pinned versions, open issues, notes for the next phase.
 6. **Open a PR titled "Phase NN — Title"**, using the PR template's 12-quality checklist. CI must be green, and CodeRabbit feedback must be resolved before merge.
 
-Push over SSH (`git -c url."git@github.com:".insteadOf="https://github.com/" push`). The `gh` token has no `workflow` scope.
+`origin` is the SSH URL (`git@github.com:snjsinghdev/kanche.git`), so a plain `git push` works. Never push over HTTPS with the `gh` token: it has no `workflow` scope, and GitHub rejects pushes that touch `.github/workflows/`.
 
 ## Definition of done
 

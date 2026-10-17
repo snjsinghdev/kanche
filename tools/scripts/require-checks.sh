@@ -24,7 +24,6 @@ gh api --method PUT "repos/${repo}/branches/main/protection" --input - <<'JSON'
   "enforce_admins": false,
   "required_pull_request_reviews": null,
   "restrictions": null,
-  "required_linear_history": true,
   "allow_force_pushes": false,
   "allow_deletions": false
 }
