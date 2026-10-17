@@ -493,8 +493,9 @@ function collectProbes(world: World, body: Body, ctx: Ctx): number {
     // A breakpoint matters only where the law changes: neighbours with the same line are one.
     const segs = world.surface.muR.segments;
     const seg = defined(segs[body.rollSeg], 'rolling segment');
-    const up = segs[body.rollSeg + 1];
-    const down = segs[body.rollSeg - 1];
+    // Indices outside the array (−1 is a property lookup) are slow in V8, so they are not read.
+    const up = body.rollSeg + 1 < segs.length ? segs[body.rollSeg + 1] : undefined;
+    const down = body.rollSeg > 0 ? segs[body.rollSeg - 1] : undefined;
     if (up !== undefined && (up.a !== seg.a || up.b !== seg.b)) add(PROBE.segUp, 0);
     if (down !== undefined && (down.a !== seg.a || down.b !== seg.b)) add(PROBE.segDown, 0);
   }
@@ -833,18 +834,19 @@ function groupDerivative(
     return;
   const sweeps = holds.length > 1 ? world.params.solver.heldSweeps : 1;
   const lambda = holdLambda;
-  lambda.length = holds.length;
+  if (lambda.length !== holds.length) lambda.length = holds.length;
   lambda.fill(0);
   for (let sweep = 0; sweep < sweeps; sweep += 1) {
-    holds.forEach((h, hi) => {
+    for (let hi = 0; hi < holds.length; hi += 1) {
+      const h = defined(holds[hi], 'hold');
       const k = holdRow(world, members, count, h);
-      if (k === 0) return;
+      if (k === 0) continue;
       const old = defined(lambda[hi], 'lambda');
       const next = Math.max(0, old - (rowAn + rowGeo.c) / k);
       const d = next - old;
       lambda[hi] = next;
       if (d !== 0) pushHold(members, count, h, d);
-    });
+    }
   }
 }
 
@@ -1212,7 +1214,8 @@ export function advanceGroup(
   tEnd: number,
 ): InternalEvent | null {
   const count = bodies.length;
-  groupMembers.length = count;
+  // Setting an array's length is slow in V8 even when it doesn't change, so only when it does.
+  if (groupMembers.length !== count) groupMembers.length = count;
   let anyMoving = false;
   for (let i = 0; i < count; i += 1) {
     const b = defined(bodies[i], 'group body');
@@ -1424,11 +1427,14 @@ export function commitGroup(
   if (t > last.t1 || t < defined(lead.pieces[0], 'piece').t0) {
     throw new PhysicsError('internal', 'commit outside the trial');
   }
-  if (t === last.t1 || !tracks.some((tr) => tr.moving)) return;
+  if (t === last.t1) return;
+  let anyMoving = false;
+  for (const tr of tracks) if (tr.moving) anyMoving = true;
+  if (!anyMoving) return;
   let k = 0;
   while (t >= defined(lead.pieces[k], 'piece').t1) k += 1;
   const count = bodies.length;
-  groupMembers.length = count;
+  if (groupMembers.length !== count) groupMembers.length = count;
   for (let i = 0; i < count; i += 1) {
     const b = defined(bodies[i], 'group body');
     const tr = defined(tracks[i], 'group track');

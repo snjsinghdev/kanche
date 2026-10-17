@@ -349,7 +349,8 @@ export class Sim {
         live += 1;
       }
     }
-    order.length = live;
+    // Setting an array's length is slow in V8 even when it doesn't change, so only when it does.
+    if (order.length !== live) order.length = live;
     for (let k = 1; k < live; k += 1) {
       const i = defined(order[k], 'order');
       let m = k - 1;
@@ -545,12 +546,13 @@ export class Sim {
 
   private commitGroupTo(group: Group, t: number): void {
     commitGroup(this.world, group.bodies, group.tracks, group.holds, t);
-    group.bodies.forEach((b, i) => {
+    for (let i = 0; i < group.bodies.length; i += 1) {
+      const b = defined(group.bodies[i], 'body');
       const track = defined(group.tracks[i], 'track');
       if (track.moving) copyKinematics(b, track.end);
       track.start = t;
       track.fresh = false;
-    });
+    }
   }
 
   /** A marble left spinning with no spin (it ran out inside a span) is at rest. */
