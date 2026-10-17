@@ -5,7 +5,14 @@
  *
  * Hand-validated: the dataset is data, and a malformed one must fail loudly before any fit.
  */
-import type { CourtSpec, MarbleInit, ParamOverrides, SizeClass } from '@kanche/physics';
+import {
+  SURFACES,
+  type CourtSpec,
+  type MarbleInit,
+  type ParamOverrides,
+  type SizeClass,
+  type SurfaceId,
+} from '@kanche/physics';
 
 export const DATASET_SCHEMA = 'kanche-kpb-dataset/1';
 
@@ -94,7 +101,13 @@ function validateRecording(where: string, r: unknown, seen: Set<string>): void {
   if (typeof r['condition'] !== 'string' || r['condition'] === '') fail(where, 'needs a condition');
   if (!RECORDING_KINDS.includes(r['kind'] as RecordingKind)) fail(where, 'unknown kind');
   if (finite(`${where}.fps`, r['fps']) <= 0) fail(where, 'fps must be positive');
-  if (!isObject(r['court'])) fail(where, 'needs a court');
+  const court = r['court'];
+  if (!isObject(court)) fail(where, 'needs a court');
+  // The rest of the court is checked by the simulation, but an unknown surface would only fail
+  // later, inside a fit or a score.
+  if (!SURFACES.includes(court['surface'] as SurfaceId)) {
+    fail(where, `court.surface must be one of ${SURFACES.join(', ')}`);
+  }
   const marbles = r['marbles'];
   if (!Array.isArray(marbles) || marbles.length === 0) fail(where, 'needs marbles');
   const ids = new Set<number>();

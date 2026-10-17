@@ -56,6 +56,12 @@ describe('the dataset format', () => {
     expect(() => validateDataset(json)).toThrow(DatasetError);
   });
 
+  it('names an unknown court surface, from an import or an old file', () => {
+    const r = good();
+    const json = dataset([{ ...r, court: { ...(r['court'] as object), surface: 'grass' } }]);
+    expect(() => validateDataset(json)).toThrow(/court\.surface must be one of cement/);
+  });
+
   it("insists on the shooter's track", () => {
     const r = good();
     const json = dataset([
