@@ -835,7 +835,7 @@ function groupDerivative(
   const sweeps = holds.length > 1 ? world.params.solver.heldSweeps : 1;
   const lambda = holdLambda;
   if (lambda.length !== holds.length) lambda.length = holds.length;
-  lambda.fill(0);
+  for (let hi = 0; hi < holds.length; hi += 1) lambda[hi] = 0;
   for (let sweep = 0; sweep < sweeps; sweep += 1) {
     for (let hi = 0; hi < holds.length; hi += 1) {
       const h = defined(holds[hi], 'hold');
