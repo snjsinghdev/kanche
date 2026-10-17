@@ -44,7 +44,7 @@ Repeat this after Playwright installs a new WebKit revision. CI is unaffected, b
 ## 3. Environment and secrets
 
 - `.env.example` (repository root) lists the **public** client keys (`VITE_*`). Copy it to `.env.local` and fill it in; Vite reads it because `envDir` is the repo root. Anything prefixed `VITE_` ships to every player, so never put a secret there.
-- `supabase/functions/.env.example` lists the server secrets. Copy it to `supabase/functions/.env`, which is git-ignored. Production secrets are set with `supabase secrets set`.
+- `supabase/functions/.env.example` lists the custom server secrets (none yet). The Edge Runtime injects the `SUPABASE_*` keys itself. Copy it to `supabase/functions/.env`, which is git-ignored. Production secrets are set with `supabase secrets set`.
 - `.gitignore` excludes every `.env*` except the examples. No secrets are in git.
 
 ## 4. Android debug build

@@ -2,7 +2,13 @@ import type { Rule, Scope } from 'eslint';
 import type { Expression, Identifier, MemberExpression, Node, Super } from 'estree';
 
 /** Names through which code can reach the global object. */
-const GLOBAL_OBJECTS = new Set(['globalThis', 'window', 'self', 'global', 'frames']);
+export const GLOBAL_OBJECTS: ReadonlySet<string> = new Set([
+  'globalThis',
+  'window',
+  'self',
+  'global',
+  'frames',
+]);
 
 type WithParent<T> = T & { parent?: Node & { parent?: Node } };
 
@@ -47,6 +53,18 @@ function unresolvedReferences(globalScope: Scope.Scope): Scope.Reference[] {
       (ref as { isValueReference?: boolean }).isValueReference !== false &&
       !inTypeQuery(ref.identifier as WithParent<Identifier>),
   );
+}
+
+/**
+ * Every reference to the global object itself (`globalThis`, `window`, `self`, ...), however it
+ * is used: member access, aliasing, destructuring, computed access or passing it on.
+ */
+export function findGlobalObjectReferences(context: Rule.RuleContext): WithParent<Identifier>[] {
+  const globalScope = context.sourceCode.scopeManager.globalScope;
+  if (globalScope === null) return [];
+  return unresolvedReferences(globalScope)
+    .map((ref) => ref.identifier as WithParent<Identifier>)
+    .filter((id) => GLOBAL_OBJECTS.has(id.name));
 }
 
 /**

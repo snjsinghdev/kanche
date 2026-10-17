@@ -9,7 +9,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Portrait only: the game is a fixed 270x480 portrait canvas (ADR-0002). Android 16
+             ignores this on large screens, where the viewport letterboxes instead. -->
         <activity
+            android:screenOrientation="portrait"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"

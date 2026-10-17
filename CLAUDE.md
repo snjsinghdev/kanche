@@ -16,7 +16,7 @@ The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prom
 
 **The determinism lint** (`tools/eslint-plugin-kanche`, ADR-0004) covers `packages/{physics,rules,ai}/src` and `packages/marble-gen/src/genome`.
 
-- **Banned:** `Math.random`, `Date`, `performance`, timers, `Intl`, `toLocale*`, `localeCompare`, `crypto`, `**`, `Math.pow`, `exp`, `log`, `sin`, `cos`, `tan`, `atan2`, `hypot`, `cbrt` and every other `Math` function off the list below, and `sort()`/`toSorted()` without a comparator.
+- **Banned:** `Math.random`, `Date`, `performance`, timers, `Intl`, `toLocale*`, `localeCompare`, `crypto`, `Temporal`, `eval`, `Function`, any use of the global object (`globalThis`, `window`, `self`), `**`, `Math.pow`, `exp`, `log`, `sin`, `cos`, `tan`, `atan2`, `hypot`, `cbrt` and every other `Math` function off the list below, and `sort()`/`toSorted()` without a comparator.
 - **Allowed:** `+ - * /` and `Math.sqrt`, `abs`, `min`, `max`, `floor`, `ceil`, `trunc`, `round`, `sign`, `imul`, `fround`, `clz32`, plus the `Math` constants.
 - Simulation inputs are integers. Randomness comes only from the seeded `createRng` in `@kanche/physics`.
 - Any change that can alter an outcome bumps `physicsVersion`, `rulesVersion`, `aiVersion` or `genomeVersion`.

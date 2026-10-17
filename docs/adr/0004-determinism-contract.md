@@ -34,9 +34,11 @@ Chosen option: **doubles with an allowlist**. The rules:
 2. **Banned:**
    - every other `Math` function, plus `Math.random`, `**` and `**=`
    - `Date`, `performance`, all timers, `queueMicrotask`, `Intl`, `toLocale*`, `localeCompare`
-   - `crypto`, `process`, `SharedArrayBuffer`, `Atomics`, `WeakRef`, `FinalizationRegistry`
+   - `crypto`, `process`, `SharedArrayBuffer`, `Atomics`, `WeakRef`, `FinalizationRegistry`, `Temporal`
+   - `eval` and `Function`, which run code the lint never sees
+   - any use of the global object (`globalThis`, `window`, `self`, `global`, `frames`): aliasing it, destructuring it or computed access on it would reach a banned global past the lint (found by CodeRabbit on PR #1)
    - `sort()` and `toSorted()` without a comparator
-   - computed access to, aliasing of, or destructuring of `Math`, and reaching any of these through `globalThis`, `window` or `self`
+   - computed access to, aliasing of, or destructuring of `Math`
 
    Curves that need transcendental functions are committed lookup tables, or series written in allowed arithmetic.
 

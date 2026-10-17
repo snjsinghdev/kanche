@@ -52,6 +52,8 @@ async function start(): Promise<void> {
     // The Phase 0 scene is static: render on change, not every frame (Phase 3 adds the loop).
     autoStart: false,
   });
+  // A canvas has no implicit role; role=img makes screen readers announce its name.
+  app.canvas.setAttribute('role', 'img');
   app.canvas.setAttribute('aria-label', 'Kanche');
   app.canvas.dataset['physicsVersion'] = String(physicsVersion);
   app.canvas.dataset['rulesVersion'] = String(rulesVersion);

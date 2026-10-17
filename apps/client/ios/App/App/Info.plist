@@ -51,11 +51,12 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<!-- iPhone: portrait only, the game is a fixed 270x480 portrait canvas (ADR-0002).
+	     iPad keeps every orientation: iPadOS 26 deprecates UIRequiresFullScreen and will require
+	     all orientations (Apple TN3192), and the viewport letterboxes any window size. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

@@ -79,6 +79,11 @@ test.describe('the Phase 0 canvas', () => {
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(960 + 1);
   });
 
+  test('gives the canvas an accessible name', async ({ page }) => {
+    await ready(page);
+    await expect(page.getByRole('img', { name: 'Kanche' })).toBeVisible();
+  });
+
   test('shows no words on screen (wordless first)', async ({ page }) => {
     await ready(page);
     expect((await page.locator('body').innerText()).trim()).toBe('');

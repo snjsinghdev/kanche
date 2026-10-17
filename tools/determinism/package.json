@@ -10,9 +10,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "@kanche/physics": "workspace:*"
-  },
-  "devDependencies": {
+    "@kanche/physics": "workspace:*",
     "@kanche/testkit": "workspace:*"
   }
 }

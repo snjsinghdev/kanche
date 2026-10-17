@@ -8,7 +8,7 @@ Postgres (migrations), Auth, and Edge Functions running on Deno. The server owns
 - **The marble ledger is append-only.** Every ownership change is a ledger event written in one transaction. Never UPDATE or DELETE ledger rows; corrections are new events. The invariants hold under concurrency: each marble has exactly one owner, stakes are escrowed, and totals are conserved (the Phase 6 gate).
 - **Server-checked turns.** Edge Functions import `@kanche/physics` and `@kanche/rules` through `functions/deno.json` and simulate at the match's pinned `physicsVersion` and `rulesVersion`.
 - **No money near marbles.** Marbles, glass rods and furnace fuel are never sold, traded for money or won through paid randomness. The only purchase is the unlock (Phase 9).
-- **Secrets** live only in function env (`supabase secrets set`; locally `functions/.env`, git-ignored). `functions/.env.example` lists the keys. The anon key is public; the service-role key never leaves the server.
+- **Secrets** live only in function env (`supabase secrets set`; locally `functions/.env`, git-ignored). `functions/.env.example` lists the custom keys. The runtime injects `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` itself, and the `SUPABASE_` prefix is reserved for them. The anon key is public; the service-role key never leaves the server.
 - **Child mode** limits stored data, stakes and notifications.
 - **Plain SQL and portable functions**, to limit vendor coupling (ADR-0005).
 

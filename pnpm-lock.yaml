@@ -297,7 +297,6 @@ importers:
       '@kanche/physics':
         specifier: workspace:*
         version: link:../../packages/physics
-    devDependencies:
       '@kanche/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit

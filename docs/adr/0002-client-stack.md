@@ -49,9 +49,11 @@ What else is decided:
 - **Rendering on demand** (`autoStart: false`) while the scene is static. Phase 3 adds the frame loop.
 - **The browser floor is pinned** in `vite.config.ts` at Vite 8's default: `chrome111`, `edge111`, `firefox114`, `safari16.4`, `ios16.4`. Android WebViews below 111 show a blank page (Fuselings measured this on stock API 30: WebView 83). A feature-detecting "update your WebView" page is a Phase 11 item.
 - **Edge-to-edge on Android:**
-  - `MainActivity` calls `EdgeToEdge.enable(this)` before `super.onCreate`, as Capacitor 8's SystemBars docs advise when `insetsHandling` isn't `disable`. Capacitor 9 makes this automatic.
+  - `MainActivity` calls `EdgeToEdge.enable(this)` **after** `super.onCreate`, as Capacitor 8's SystemBars docs advise when `insetsHandling` isn't `disable`. Capacitor 9 makes this automatic. The order matters: called earlier, it builds the window decor before `BridgeActivity` switches to `AppTheme.NoActionBar`, and Android 15 then shows an action bar titled "Kanche" over the game (found on the owner's phone, `docs/evidence/phase-00/README.md`).
+  - Insets can arrive after the first layout (Android 11) or change at runtime (split screen, navigation mode), and they fire no `resize` event. A `ResizeObserver` on the safe-area probe re-lays out on every change.
   - `SystemBars` uses `insetsHandling: 'css'`, so WebViews below 140 still get the insets as CSS variables.
   - `style: 'DARK'` gives light icons over the dark letterbox.
+- **Portrait only on phones.** The Android activity sets `screenOrientation="portrait"`, and the iPhone `Info.plist` allows only `UIInterfaceOrientationPortrait`. iPad keeps every orientation and no `UIRequiresFullScreen`, because iPadOS 26 deprecates that key and will require all orientations (Apple TN3192). Android 16 likewise ignores orientation locks on large screens. On those, the viewport letterboxes the portrait game in any window.
 - **The app ID `com.jupiterlabtech.kanche.dev` is a placeholder.** The store ID is chosen in Phase 11 and is permanent after the first upload.
 - **The test hook** `window.__kanche` (viewport, versions, pixel sampling) is included only in non-production modes (`e2e`, `debug`, dev), and is lazy-loaded.
 - **iOS** uses Capacitor 8's Swift Package Manager project. Linux can't build it, so the `ios-simulator` job (`ios.yml`, `macos-26`) builds it unsigned, on demand. macOS minutes count 10× (ADR-0001).
@@ -89,4 +91,4 @@ What else is decided:
 
 ## More information
 
-Revisit when a low-end device misses 30 fps p95 or 50 ms audio (Phase 3), when Capacitor 9 ships (remove the `EdgeToEdge` call), or when store data shows real users below WebView 111.
+Revisit when a low-end device misses 30 fps p95 or 50 ms audio (Phase 3), when Capacitor 9 ships (remove the `EdgeToEdge` call from `MainActivity`; it makes the call itself), or when store data shows real users below WebView 111.

@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { createRng } from '../src/index.ts';
+import { referenceRng } from './reference-rng.ts';
 
 const seed = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -15,22 +16,28 @@ describe('createRng', () => {
     expect(rng42.state()).toEqual(GOLDEN_STATE_42);
   });
 
-  it('matches an independent BigInt implementation of xoshiro128**', () => {
-    const M = 0xffffffffn;
-    const rotl = (x: bigint, k: number): bigint => ((x << BigInt(k)) | (x >> BigInt(32 - k))) & M;
+  it('seeds and steps exactly like an independent BigInt splitmix32 + xoshiro128**', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(seed, fc.constantFrom(0, 1, 42, 0x7fffffff, 0x80000000, 0xffffffff)),
+        (s) => {
+          const rng = createRng(s);
+          const ref = referenceRng(s);
+          expect(rng.state().map(BigInt)).toEqual(ref.state());
+          for (let i = 0; i < 64; i += 1) expect(BigInt(rng.nextUint32())).toBe(ref.next());
+        },
+      ),
+    );
+    // A long run from one seed, past any short-period mistake.
     const rng = createRng(42);
-    const s = rng.state().map(BigInt) as [bigint, bigint, bigint, bigint];
-    for (let i = 0; i < 10_000; i += 1) {
-      const expected = (rotl((s[1] * 5n) & M, 7) * 9n) & M;
-      const t = (s[1] << 9n) & M;
-      s[2] ^= s[0];
-      s[3] ^= s[1];
-      s[1] ^= s[2];
-      s[0] ^= s[3];
-      s[2] ^= t;
-      s[3] = rotl(s[3], 11);
-      expect(BigInt(rng.nextUint32())).toBe(expected);
-    }
+    const ref = referenceRng(42);
+    for (let i = 0; i < 10_000; i += 1) expect(BigInt(rng.nextUint32())).toBe(ref.next());
+  });
+
+  it('has golden values that the independent reference reproduces', () => {
+    const ref0 = referenceRng(0);
+    expect([ref0.next(), ref0.next(), ref0.next(), ref0.next()].map(Number)).toEqual(GOLDEN_SEED_0);
+    expect(referenceRng(42).state().map(Number)).toEqual(GOLDEN_STATE_42);
   });
 
   it('gives the same sequence for the same seed', () => {

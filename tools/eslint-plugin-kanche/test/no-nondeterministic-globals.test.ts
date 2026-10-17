@@ -13,6 +13,10 @@ describe('kanche/no-nondeterministic-globals', () => {
       'export function f(performance: { now(): number }) { return performance.now(); }',
       'export type D = typeof Date;',
       'export const o = { Date: 1, setTimeout: 2 }; export const d = o.Date;',
+      // Local bindings named like the global object are not the global object.
+      'const self = { a: 1 }; export const v = self.a;',
+      'export function f(window: { x: number }) { return window.x; }',
+      'export type G = typeof globalThis;',
     ],
     invalid: [
       ...Object.keys(NONDETERMINISTIC_GLOBALS).map((name) => ({
@@ -38,6 +42,40 @@ describe('kanche/no-nondeterministic-globals', () => {
       {
         code: 'export const r = crypto.getRandomValues(new Uint32Array(1));',
         errors: [{ messageId: 'banned' as const }],
+      },
+      {
+        code: 'export const t = Temporal.Now.instant();',
+        errors: [{ messageId: 'banned' as const }],
+      },
+      { code: "export const v = eval('1 + 1');", errors: [{ messageId: 'banned' as const }] },
+      {
+        code: "export const f = new Function('return 1');",
+        errors: [{ messageId: 'banned' as const }],
+      },
+      // Ways round the ban through the global object (CodeRabbit on PR #1).
+      {
+        code: 'const g = globalThis; export const t = g.Date.now();',
+        errors: [{ messageId: 'globalObject' as const, data: { name: 'globalThis' } }],
+      },
+      {
+        code: 'const { Date: D } = globalThis; export const t = D.now();',
+        errors: [{ messageId: 'globalObject' as const }],
+      },
+      {
+        code: "const k = 'Date'; export const t = globalThis[k].now();",
+        errors: [{ messageId: 'globalObject' as const }],
+      },
+      {
+        code: 'export const t = globalThis.window.Date.now();',
+        errors: [{ messageId: 'globalObject' as const }],
+      },
+      {
+        code: 'export const v = self.Math.sqrt(2);',
+        errors: [{ messageId: 'globalObject' as const, data: { name: 'self' } }],
+      },
+      {
+        code: 'declare function use(x: unknown): void; use(window);',
+        errors: [{ messageId: 'globalObject' as const }],
       },
     ],
   });
