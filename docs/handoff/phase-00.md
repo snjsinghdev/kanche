@@ -58,14 +58,25 @@ Node 24.22.0 · pnpm 12.11.2 · TypeScript 6.0.3 · Turborepo 2.11.7 · ESLint 1
 
 ## Gate status
 
-| Done-when item                                                                   | Status                                                                                                                        |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| A fresh clone passes `pnpm install && pnpm verify`                               | ✅ A fresh `git clone` in the scratchpad: install 27.5 s, `pnpm verify` exit 0 in 1 min 47 s (2026-10-17)                     |
-| The determinism lint fails on a `Math.sin` fixture in packages/physics           | ✅ `kanche/no-banned-math`, exit 1; tested in `pnpm test`                                                                     |
-| The harness reports identical hashes in Chromium, WebKit, Firefox, Node and Deno | ✅ `0e4d48c50528e812` in all five, locally (CI result recorded below once it has run)                                         |
-| The Android debug build installs on a low-end phone and shows the canvas         | ✅ On the low-end **emulator** stand-in (API 30, 720×1280, 2 GB); see open issue 4 for the physical phones                    |
-| `docs/handoff/phase-00.md`                                                       | ✅ This file                                                                                                                  |
-| A PR titled "Phase 00 — Foundations" is open with CodeRabbit feedback resolved   | ⏳ The PR is open. CodeRabbit can't review until the owner installs the CodeRabbit app on `snjsinghdev/kanche` (open issue 1) |
+| Done-when item                                                                   | Status                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A fresh clone passes `pnpm install && pnpm verify`                               | ✅ A fresh `git clone` in the scratchpad: install 27.5 s, `pnpm verify` exit 0 in 1 min 47 s (2026-10-17)                                                                                  |
+| The determinism lint fails on a `Math.sin` fixture in packages/physics           | ✅ `kanche/no-banned-math`, exit 1; tested in `pnpm test`                                                                                                                                  |
+| The harness reports identical hashes in Chromium, WebKit, Firefox, Node and Deno | ✅ `0e4d48c50528e812` in all five, locally and in CI (run 39018350863)                                                                                                                     |
+| The Android debug build installs on a low-end phone and shows the canvas         | ✅ On the low-end **emulator** stand-in (API 30, 720×1280, 2 GB); see open issue 4 for the physical phones                                                                                 |
+| `docs/handoff/phase-00.md`                                                       | ✅ This file                                                                                                                                                                               |
+| A PR titled "Phase 00 — Foundations" is open with CodeRabbit feedback resolved   | ⏳ [PR #1](https://github.com/snjsinghdev/kanche/pull/1) is open with CI green. CodeRabbit can't review until the owner installs the CodeRabbit app on `snjsinghdev/kanche` (open issue 1) |
+
+## CI on PR #1
+
+- **First run (39018132864):** `verify`, `e2e ×3` and `android-debug` passed. `determinism` failed before running the harness: setup-deno needs `unzip`, which the Playwright container lacks and its non-root user can't install. Fixed by running that job on the host with `playwright install --with-deps` (commit `e68297e`).
+- **Second run (39018350863):** all six jobs green.
+  - `verify` 40 s
+  - `e2e` chromium, webkit and firefox about 1 min each
+  - `determinism` 1 min 40 s: Node v24.22.0, Deno 2.9.7, Chromium 156, WebKit 27.2 and Firefox 157 all gave `0e4d48c50528e812`, the same as on this machine
+  - `android-debug` 1 min 21 s: APK 4.74 MiB of 30 MiB
+- **iOS (`ios.yml`, run 39018138826):** `** BUILD SUCCEEDED **` on `macos-26` with Xcode 26.6 (iPhoneSimulator 26.5 SDK), unsigned, in 53 s. The `ios` label was then removed so pushes don't re-run it.
+- **The nightly** can't be dispatched until `nightly.yml` is on `main` (GitHub resolves dispatch from the default branch). It runs for the first time after merge.
 
 ## Deviations from the approved plan
 
