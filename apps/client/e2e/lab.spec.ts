@@ -12,7 +12,7 @@ test.describe('the Physics Lab', () => {
     await ready(page);
     const runs = await page.evaluate(() => window.__kancheLab?.runs());
     // packages/physics/scripts/bench.ts reports this hash for the break in Node.
-    expect(runs?.a?.hash).toBe('35260dacdb2ad020');
+    expect(runs?.a?.hash).toBe('b2396155f54ebc61');
     expect(runs?.b).toBeNull();
     const size = await page
       .locator('#view')

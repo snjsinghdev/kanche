@@ -53,6 +53,28 @@ describe('KPB 9: the energy ledger', () => {
   }, 600_000);
 });
 
+describe('KPB 9 and 11: the shots the 10,000-shot survey caught', () => {
+  // Shot i is randomShot(i·7919 + 1), as in the suites above. Each was a real defect, fixed in
+  // Phase 1 (ADR-0006): a marble resting against a step re-found its contact forever (5506); an
+  // impact at a rounding-sized approach never ended (6588); a take-off from an edge was taken for
+  // a contact with the ground below (3408); the separation from an edge was removed through a
+  // vertical velocity a plane does not carry (5506); and the coarse stop refinement was used on
+  // slopes (8503, 8851, 8986, 9976).
+  it.each([3408, 5506, 6588, 8503, 8851, 8986, 9976])(
+    'shot %i closes its ledger to 1e-9 without hitting a cap',
+    (i) => {
+      const r = simulateShot(randomShot(i * 7919 + 1), { timeline: false });
+      const L = r.ledger;
+      const scale = L.initialKinetic + Math.abs(L.initialPotential - L.finalPotential);
+      expect(Math.abs(L.residual) / scale).toBeLessThan(1e-9);
+      const m = r.metrics;
+      expect([m.stepCapHits, m.substepCapHits, m.impactCapHits, Number(m.shotCapHit)]).toEqual([
+        0, 0, 0, 0,
+      ]);
+    },
+  );
+});
+
 describe('KPB 10: momentum in frictionless impacts with the ground removed', () => {
   it.each([
     ['frictionless', 0],

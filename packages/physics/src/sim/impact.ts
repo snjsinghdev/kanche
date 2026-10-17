@@ -144,6 +144,9 @@ function pointVel(
   out.z = v.vz + (v.wx * ry - v.wy * rx);
 }
 
+/** The smallest change in normal speed one impulse step makes (m/s). */
+const MIN_DV = 1e-12;
+
 const va = newVel();
 const vb = newVel();
 const va0 = newVel();
@@ -293,7 +296,9 @@ export function resolveImpact(inp: ImpactInput, out: ImpactOutput): ImpactOutput
   if (!(sn < 0)) return out;
 
   const invMass = 1 / a.m + (inp.b === null ? 0 : 1 / inp.b.body.m);
-  const dP = ((1 + inp.e) * -sn) / invMass / inp.steps;
+  // A rounding-sized approach would make each step's change smaller than the rounding in the
+  // separation itself, and the impact would never end: no step changes it by less than MIN_DV.
+  const dP = Math.max(((1 + inp.e) * -sn) / invMass / inp.steps, MIN_DV / invMass);
   const e2 = inp.e * inp.e;
   let compression = true;
   let wc = 0; // compression work, ∫ −s dP (J)

@@ -194,6 +194,10 @@ function escape(world: World, gap: Gap, t: number, tEnd: number): { root: boolea
   const g0 = gap.g;
   const r0 = gap.rate;
   const tol = world.params.thresholds.gapTol;
+  // Touching, closing at a rounding rate, and still within the tolerance at the end of the piece:
+  // that is rounding, not a contact. Resolving it would only leave the same rounding behind and
+  // find it again at the same instant (a marble resting against a step, for one).
+  if (Math.abs(g0) <= tol && r0 > -RATE_TOL && gEnd >= -tol) return { root: false, t: end };
   // Touching (or a hair inside), closing however slowly, and still closing and inside at the end
   // of the piece: the contact is now.
   if (g0 <= tol && r0 < 0 && rEnd < 0 && gEnd <= 0) return { root: true, t };
@@ -271,6 +275,46 @@ export interface StaticHit {
   feature: StaticFeature | null;
 }
 
+const surfaceCache = new WeakMap<readonly StaticFeature[], readonly (readonly StaticFeature[])[]>();
+
+/**
+ * The features grouped into surfaces: a block's top, edges and corners; each wall; and the ground
+ * (the base and the hole). Within a surface the nearest feature's gap is continuous, but between
+ * surfaces the minimum jumps: a marble touching a step's edge and falling to the ground beside it
+ * would see one gap that touches now and is deep inside later, and the search would take that
+ * for a contact now. So each surface is searched on its own.
+ */
+function surfaces(features: readonly StaticFeature[]): readonly (readonly StaticFeature[])[] {
+  const cached = surfaceCache.get(features);
+  if (cached !== undefined) return cached;
+  const groups = new Map<string, StaticFeature[]>();
+  for (const f of features) {
+    let key: string;
+    switch (f.kind) {
+      case 'top':
+        key = `block ${String(f.block.index)}`;
+        break;
+      case 'edge':
+        key = `block ${String(f.edge.block)}`;
+        break;
+      case 'corner':
+        key = `block ${String(f.corner.block)}`;
+        break;
+      case 'wall':
+        key = `wall ${String(f.wall.id)}`;
+        break;
+      default:
+        key = 'ground';
+    }
+    const list = groups.get(key);
+    if (list === undefined) groups.set(key, [f]);
+    else list.push(f);
+  }
+  const out = [...groups.values()];
+  surfaceCache.set(features, out);
+  return out;
+}
+
 /** First contact of a marble with any of the features within [t0, tEnd]. */
 export function staticContact(
   world: World,
@@ -287,11 +331,20 @@ export function staticContact(
   staticGap.world = world;
   staticGap.body = body;
   staticGap.track = track;
-  staticGap.features = features;
-  const t = firstRoot(world, staticGap, t0, tEnd);
-  if (t === Infinity) return out;
-  staticGap.eval(t);
-  out.t = t;
-  out.feature = staticGap.nearest;
+  let limit = tEnd;
+  for (const surface of surfaces(features)) {
+    staticGap.features = surface;
+    const t = firstRoot(world, staticGap, t0, limit);
+    if (t === Infinity) continue;
+    staticGap.eval(t);
+    const f = staticGap.nearest;
+    if (f === null) continue;
+    // Earliest first; at the same time, the lower feature key (a total order).
+    if (t < out.t || out.feature === null || featureKey(f) < featureKey(out.feature)) {
+      out.t = t;
+      out.feature = f;
+      limit = t;
+    }
+  }
   return out;
 }

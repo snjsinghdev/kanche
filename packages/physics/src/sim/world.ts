@@ -1085,9 +1085,9 @@ export class Sim {
       }
     }
     if (feature !== null && canSupport(feature)) {
-      const sn = s.vx * nx + s.vy * ny + s.vz * nz;
-      if (sn <= vHop) {
-        if (b.support === null) {
+      if (b.support === null) {
+        const sn = s.vx * nx + s.vy * ny + s.vz * nz;
+        if (sn <= vHop) {
           b.support = toSupport(feature);
           if (b.support.kind === 'base') locateCell(this.world, b);
           this.removeNormal(b, nx, ny, nz);
@@ -1095,9 +1095,9 @@ export class Sim {
           // Straight from one support to another (onto an edge, say) is a hand-over, not a flight.
           if (left) this.emit('support', b);
           left = false;
-        } else if (sn > 0) {
-          this.removeNormal(b, nx, ny, nz);
         }
+      } else {
+        this.removeSeparation(b, nx, ny, nz, vHop);
       }
     }
     if (left) this.emit('take-off', b);
@@ -1108,6 +1108,29 @@ export class Sim {
     if (isPlane(sup)) return { x: 0, y: 0, z: 1 };
     const gm = curvedGeometry(this.ctxFor(b), b.s, newGeo());
     return { x: gm.nx, y: gm.ny, z: gm.nz };
+  }
+
+  /**
+   * A supported marble separating from a feature slower than vHop stays against it: the
+   * separation is removed. On a plane the marble's vertical velocity is not modelled (it follows
+   * the ground), so the separation is the plane's part of the normal speed, v_h·(n_h + n_z·∇h),
+   * and it is removed along that direction, never through a vertical velocity the next substep
+   * would drop unbooked.
+   */
+  private removeSeparation(b: Body, nx: number, ny: number, nz: number, vHop: number): void {
+    const s = b.s;
+    const g = this.gradient(b);
+    if (g === null) {
+      const sn = s.vx * nx + s.vy * ny + s.vz * nz;
+      if (sn > 0 && sn <= vHop) this.removeNormal(b, nx, ny, nz);
+      return;
+    }
+    const qx = nx + nz * g.x;
+    const qy = ny + nz * g.y;
+    const q = Math.sqrt(qx * qx + qy * qy);
+    const sn = s.vx * qx + s.vy * qy;
+    if (q === 0 || !(sn > 0 && sn <= vHop)) return;
+    this.removeNormal(b, qx / q, qy / q, 0);
   }
 
   /** Remove the velocity component along n (a tiny separation), booking the energy as impact loss. */

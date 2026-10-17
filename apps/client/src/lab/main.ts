@@ -30,6 +30,8 @@ interface Run {
 
 interface LabHook {
   readonly ready: true;
+  /** KPB 16 on this device: the break's wall time over warm runs (ms). */
+  bench(runs: number): { median: number; min: number; p90: number; runs: number; hash: string };
   runs(): {
     a: { hash: string; duration: number } | null;
     b: { hash: string; duration: number } | null;
@@ -364,8 +366,30 @@ new ResizeObserver(draw).observe(canvas);
 
 load('break');
 run();
+function bench(runs: number): {
+  median: number;
+  min: number;
+  p90: number;
+  runs: number;
+  hash: string;
+} {
+  const setup = SCENARIOS['break'] as ShotSetup;
+  for (let i = 0; i < 20; i += 1) simulateShot(setup, { timeline: false });
+  const times: number[] = [];
+  let hash = '';
+  for (let i = 0; i < runs; i += 1) {
+    const t0 = performance.now();
+    hash = simulateShot(setup, { timeline: false }).hash;
+    times.push(performance.now() - t0);
+  }
+  times.sort((x, y) => x - y);
+  const at = (q: number): number => times[Math.min(runs - 1, Math.floor(q * runs))] ?? NaN;
+  return { median: at(0.5), min: at(0), p90: at(0.9), runs, hash };
+}
+
 window.__kancheLab = {
   ready: true,
+  bench,
   runs: () => ({
     a: a === null ? null : { hash: a.result.hash, duration: a.result.duration },
     b: b === null ? null : { hash: b.result.hash, duration: b.result.duration },

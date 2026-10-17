@@ -448,8 +448,11 @@ function stopFraction(stopRefine: number, p: number): number {
   return p < DRAG_SIDE ? 0.5 : stopRefine;
 }
 
-/** Side-force ratio below which a stop needs no fine refinement (–). */
-const DRAG_SIDE = 1e-3;
+/**
+ * Side-force ratio below which a stop needs no fine refinement (–). Set against the
+ * 10,000-shot survey: at 1e-3, soft flicks on slopes closed the ledger only to 2e-9.
+ */
+const DRAG_SIDE = 3e-4;
 
 // ---------------------------------------------------------------------------------------------
 // Probes

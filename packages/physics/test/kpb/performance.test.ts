@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { simulateShot } from '../../src/index.ts';
 import { breakShot } from '../../src/testing/index.ts';
 
-/** The break's substeps at the last recorded measurement (6,004), plus 5% (–). */
+/** The break's substeps at the last recorded measurement (6,182), plus 2% (–). */
 const SUBSTEP_CEILING = 6300;
 
 describe('KPB 16: a 16-marble break', () => {
