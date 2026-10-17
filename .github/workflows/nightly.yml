@@ -1,5 +1,5 @@
 # The full suite every night (03:00 IST) on days main changed, and on demand: everything in CI
-# with 10,000 harness seeds, plus a dependency audit every night. The iOS simulator build runs
+# with 10,000 harness seeds, the KPB suites over 10,000 shots, plus a dependency audit every night. The iOS simulator build runs
 # only when the nightly is dispatched by hand (macOS minutes count 10x; ADR-0001).
 name: Nightly
 
@@ -40,6 +40,26 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       harness_seeds: 10000
+
+  # The KPB integrity and determinism suites at their full size (MECHANICS-REVIEW: every property
+  # over 10,000 shots), without coverage instrumentation, which would slow them twelvefold.
+  kpb:
+    name: kpb
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      KANCHE_KPB_SHOTS: '10000'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @kanche/physics exec vitest run test/kpb --coverage.enabled=false
 
   ios:
     name: ios

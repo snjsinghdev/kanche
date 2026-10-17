@@ -52,6 +52,17 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm budgets
+      # KPB 16 without coverage instrumentation. --max is a regression ceiling, not the KPB pass
+      # mark (≤ 5 ms), which is recorded as open in docs/kpb.md.
+      - name: KPB 16 bench
+        run: pnpm --filter @kanche/physics bench 200 --max 60 --json "$RUNNER_TEMP/kpb16.json"
+      - name: Keep the KPB 16 numbers
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kpb16
+          path: ${{ runner.temp }}/kpb16.json
+          if-no-files-found: ignore
       - name: Keep coverage reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

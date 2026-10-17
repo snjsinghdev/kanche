@@ -1,9 +1,11 @@
 /**
  * The shot loop (ADR-0006). Time runs on the fixed dt grid. Inside each step every moving marble
- * makes a trial advance to the grid line; the earliest event among their internal events and
- * their contacts splits the step; every marble is re-integrated to that time; the event is
- * resolved; and the step continues from there. Simultaneous events resolve one at a time in the
- * order (time, kind, lower id, higher id).
+ * (or group of held marbles) makes a trial advance to the grid line. The earliest event among
+ * their internal events and their contacts splits the step: only the marbles it involves are
+ * committed to that time, the event is resolved, and those marbles make a new trial from there.
+ * Every other marble keeps its trial, so its integration never depends on events it takes no part
+ * in. At the grid line every marble commits to the end of its trial. Simultaneous events resolve
+ * one at a time in the order (time, kind, lower id, higher id).
  */
 
 import { Fnv64 } from '../det/hash.ts';
@@ -21,6 +23,7 @@ import type { ContactPair } from '../params/types.ts';
 import { MOTION_CODE, type MarbleState } from '../state.ts';
 import {
   advanceGroup,
+  commitGroup,
   holdNeedNow,
   restTrack,
   locateCell,
@@ -42,7 +45,7 @@ import {
   type Body,
   type Support,
 } from './body.ts';
-import { pairContact, staticContact, type StaticHit } from './contacts.ts';
+import { pairContact, pieceAt, staticContact, type StaticHit } from './contacts.ts';
 import {
   curvedGeometry,
   newCtx,
@@ -53,7 +56,7 @@ import {
 } from './derivative.ts';
 import { canSupport, featureGap, holeRadial, newGap, type StaticFeature } from './features.ts';
 import { copyDyn, newDyn, type Dyn } from './dyn.ts';
-import { extendBox } from './hermite.ts';
+import { extendBox, positionAt } from './hermite.ts';
 import { newImpactOutput, resolveImpact, type ImpactSide } from './impact.ts';
 import { canHold, holdGeometry, newHoldGeo, type Hold, type HoldGeo } from './holds.ts';
 import { MAX_EXACT, solveLcp } from './lcp.ts';
@@ -92,6 +95,12 @@ interface Next {
   b: Body | null;
   feature: StaticFeature | null;
   internal: InternalEvent | null;
+}
+
+interface Group {
+  readonly bodies: Body[];
+  readonly tracks: Track[];
+  readonly holds: Hold[];
 }
 
 interface Box {
@@ -177,24 +186,32 @@ export class Sim {
       this.bodies.forEach((b, i) => {
         movedThisStep[i] = !b.done && b.motion !== 'resting';
       });
+      for (const group of this.groups()) {
+        // A constant trial (nothing in the group moves) holds for the next step too.
+        const keep = group.tracks.every((tr) => tr.fresh);
+        for (const tr of group.tracks) {
+          tr.start = 0;
+          if (!keep) tr.fresh = false;
+          else {
+            const p = defined(tr.pieces[0], 'piece');
+            p.t0 = 0;
+            p.t1 = dt;
+          }
+        }
+      }
       let eventsInStep = 0;
       while (this.tau < dt) {
-        const span = dt - this.tau;
-        const next = this.findNext(span);
-        if (next === null) {
-          this.commitAll(span);
-          this.tau = dt;
-          for (const b of this.bodies) this.tidySpin(b);
-          break;
-        }
-        this.commitTo(next.t);
-        this.tau = next.t >= span ? dt : this.tau + next.t;
+        const next = this.findNext();
+        if (next === null) break;
+        this.commitInvolved(next);
+        this.tau = Math.min(next.t, dt);
         this.apply(next);
         for (const b of this.bodies) this.tidySpin(b);
         this.checkPockets();
         eventsInStep += 1;
         if (this.events.length > solver.eventsPerShot) {
           metrics.shotCapHit = true;
+          this.commitEveryone();
           this.forceRest();
           return;
         }
@@ -204,6 +221,9 @@ export class Sim {
           eventsInStep = 0;
         }
       }
+      this.tau = dt;
+      this.commitEveryone();
+      for (const b of this.bodies) this.tidySpin(b);
       this.checkPockets();
       this.bodies.forEach((b, i) => {
         if (movedThisStep[i] === true) this.keyframe(b);
@@ -214,16 +234,33 @@ export class Sim {
   // -------------------------------------------------------------------------------------------
   // Finding the next event
 
-  private findNext(span: number): Next | null {
+  /**
+   * The next event from now to the grid line. Groups whose trial is still fresh keep it (and its
+   * internal event); the rest make a new trial from now.
+   */
+  private findNext(): Next | null {
     const { bodies, tracks, world } = this;
+    const now = this.tau;
+    const end = world.params.dt;
     let best: Next | null = null;
     for (const group of this.groups()) {
-      const lone = group.bodies.length === 1 ? group.bodies[0] : undefined;
-      if (lone !== undefined && (lone.done || lone.motion === 'resting')) {
-        restTrack(lone, defined(group.tracks[0], 'track'), span);
-        continue;
+      const lead = defined(group.tracks[0], 'track');
+      let ev: InternalEvent | null = null;
+      if (lead.fresh) {
+        for (const tr of group.tracks) if (tr.event !== null) ev = tr.event;
+      } else {
+        for (const tr of group.tracks) {
+          if (tr.start !== now) throw new PhysicsError('internal', 'a stale trial is behind');
+          tr.fresh = true;
+        }
+        const lone = group.bodies.length === 1 ? group.bodies[0] : undefined;
+        if (lone !== undefined && (lone.done || lone.motion === 'resting')) {
+          restTrack(lone, lead, now, end);
+        } else {
+          ev = advanceGroup(world, group.bodies, group.tracks, group.holds, now, end);
+        }
+        for (const b of group.bodies) this.boxOf(b);
       }
-      const ev = advanceGroup(world, group.bodies, group.tracks, group.holds, span);
       if (ev !== null) {
         const n: Next = {
           t: ev.t,
@@ -236,7 +273,7 @@ export class Sim {
         if (best === null || before(n, best)) best = n;
       }
     }
-    const limit = best === null ? span : best.t;
+    const limit = best === null ? end : best.t;
     // Static features, for the marbles that move.
     for (let i = 0; i < bodies.length; i += 1) {
       const b = defined(bodies[i], 'body');
@@ -244,7 +281,7 @@ export class Sim {
       if (b.done || !track.moving) continue;
       const feats = this.featuresFor(b);
       if (feats.length === 0) continue;
-      const hit = staticContact(world, b, track, feats, limit, this.hit);
+      const hit = staticContact(world, b, track, feats, now, limit, this.hit);
       if (hit.feature !== null && hit.t <= limit) {
         const n: Next = {
           t: hit.t,
@@ -257,51 +294,34 @@ export class Sim {
         if (best === null || before(n, best)) best = n;
       }
     }
-    // Marble pairs, through a sort-and-sweep broadphase on the trial curves' boxes.
-    const order = this.order;
-    order.length = 0;
-    for (let i = 0; i < bodies.length; i += 1) {
-      const b = defined(bodies[i], 'body');
-      if (b.done) continue;
-      const track = defined(tracks[i], 'track');
-      const box = defined(this.boxes[i], 'box');
-      box.xMin = Infinity;
-      box.xMax = -Infinity;
-      box.yMin = Infinity;
-      box.yMax = -Infinity;
-      box.zMin = Infinity;
-      box.zMax = -Infinity;
-      for (let p = 0; p < track.count; p += 1) {
-        const pc = defined(track.pieces[p], 'piece');
-        if (pc.t0 > limit) break;
-        extendBox(pc, box);
-      }
-      box.xMin -= b.r;
-      box.xMax += b.r;
-      box.yMin -= b.r;
-      box.yMax += b.r;
-      box.zMin -= b.r;
-      box.zMax += b.r;
-      order.push(i);
-    }
-    order.sort(this.byBox);
-    for (let oi = 0; oi < order.length; oi += 1) {
-      const i = defined(order[oi], 'order');
-      const bi = defined(this.boxes[i], 'box');
+    // Marble pairs with a moving marble, where the boxes of their trials overlap. Each pair is
+    // searched once, the lower index first; the earliest event does not depend on the order.
+    const n = bodies.length;
+    for (let i = 0; i < n; i += 1) {
       const ta = defined(tracks[i], 'track');
-      for (let oj = oi + 1; oj < order.length; oj += 1) {
-        const j = defined(order[oj], 'order');
+      const A = defined(bodies[i], 'body');
+      if (!ta.moving || A.done) continue;
+      const bi = defined(this.boxes[i], 'box');
+      for (let j = 0; j < n; j += 1) {
+        const tb = defined(tracks[j], 'track');
+        const B = defined(bodies[j], 'body');
+        if (j === i || B.done || (tb.moving && j < i)) continue;
         const bj = defined(this.boxes[j], 'box');
-        if (bj.xMin > bi.xMax) break;
-        if (bj.yMin > bi.yMax || bi.yMin > bj.yMax || bj.zMin > bi.zMax || bi.zMin > bj.zMax) {
+        if (
+          bj.xMin > bi.xMax ||
+          bi.xMin > bj.xMax ||
+          bj.yMin > bi.yMax ||
+          bi.yMin > bj.yMax ||
+          bj.zMin > bi.zMax ||
+          bi.zMin > bj.zMax
+        ) {
           continue;
         }
-        const tb = defined(tracks[j], 'track');
-        if (!ta.moving && !tb.moving) continue;
-        const A = defined(bodies[i], 'body');
-        const B = defined(bodies[j], 'body');
         if (this.holds.length > 0 && this.heldPair(A, B)) continue;
-        const t = pairContact(world, A, ta, B, tb, limit);
+        const t =
+          i < j
+            ? pairContact(world, A, ta, B, tb, now, limit)
+            : pairContact(world, B, tb, A, ta, now, limit);
         if (t <= limit) {
           const lo = A.id < B.id ? A : B;
           const hi = A.id < B.id ? B : A;
@@ -313,21 +333,37 @@ export class Sim {
     return best;
   }
 
-  private readonly order: number[] = [];
   private readonly movedThisStep: boolean[] = [];
   /** Every marble on its own: the groups whenever nothing is held. */
-  private readonly singletons: { bodies: Body[]; tracks: Track[]; holds: Hold[] }[];
+  private readonly singletons: Group[];
+  /** The groups while the holds stay as they are (null once they change). */
+  private grouped: Group[] | null = null;
 
-  /** Broadphase order: by the box's lower x, then by id. */
-  private readonly byBox = (i: number, j: number): number => {
-    const d = defined(this.boxes[i], 'box').xMin - defined(this.boxes[j], 'box').xMin;
-    return d !== 0 ? d : defined(this.bodies[i], 'body').id - defined(this.bodies[j], 'body').id;
-  };
+  /** The box around a marble's whole trial (its curves' bounds grown by its radius). */
+  private boxOf(b: Body): void {
+    const i = this.bodies.indexOf(b);
+    const track = defined(this.tracks[i], 'track');
+    const box = defined(this.boxes[i], 'box');
+    box.xMin = Infinity;
+    box.xMax = -Infinity;
+    box.yMin = Infinity;
+    box.yMax = -Infinity;
+    box.zMin = Infinity;
+    box.zMax = -Infinity;
+    for (let p = 0; p < track.count; p += 1) extendBox(defined(track.pieces[p], 'piece'), box);
+    box.xMin -= b.r;
+    box.xMax += b.r;
+    box.yMin -= b.r;
+    box.yMax += b.r;
+    box.zMin -= b.r;
+    box.zMax += b.r;
+  }
 
   /** Marbles joined by holds advance together; every other marble is a group of its own. */
-  private groups(): { bodies: Body[]; tracks: Track[]; holds: Hold[] }[] {
+  private groups(): Group[] {
     const { bodies, tracks, holds } = this;
     if (holds.length === 0) return this.singletons;
+    if (this.grouped !== null) return this.grouped;
     const parent = bodies.map((_, i) => i);
     const root = (i: number): number => {
       let r = i;
@@ -340,7 +376,7 @@ export class Sim {
       const rb = root(bodies.indexOf(h.b));
       if (ra !== rb) parent[Math.max(ra, rb)] = Math.min(ra, rb);
     }
-    const out: { bodies: Body[]; tracks: Track[]; holds: Hold[] }[] = [];
+    const out: Group[] = [];
     const at = new Map<number, number>();
     bodies.forEach((b, i) => {
       const r = root(i);
@@ -358,7 +394,21 @@ export class Sim {
       const g = defined(at.get(root(bodies.indexOf(h.a))), 'hold group');
       defined(out[g], 'group').holds.push(h);
     }
+    // Holds change only at events, whose marbles are committed to now: a group never mixes a
+    // fresh trial with a committed state.
+    for (const g of out) {
+      const lead = defined(g.tracks[0], 'track');
+      if (g.tracks.some((tr) => tr.fresh !== lead.fresh || tr.start !== lead.start)) {
+        throw new PhysicsError('internal', 'a hold joined marbles at different times');
+      }
+    }
+    this.grouped = out;
     return out;
+  }
+
+  /** The holds changed: regroup at the next search. */
+  private regroup(): void {
+    this.grouped = null;
   }
 
   private heldPair(a: Body, b: Body): boolean {
@@ -374,11 +424,22 @@ export class Sim {
   }
 
   private readonly featureCache = new Map<string, readonly StaticFeature[]>();
+  private lastSupport: Support | null = null;
+  private lastFeatures: readonly StaticFeature[] = [];
 
   /** The features a marble on this support could strike (cached per support). */
   private supportFeatures(sup: Support | null): readonly StaticFeature[] {
     const all = this.world.features;
     if (sup === null) return all;
+    // Most marbles share one support object (the base), so the last answer usually holds.
+    if (sup === this.lastSupport) return this.lastFeatures;
+    const list = this.featuresOn(sup, all);
+    this.lastSupport = sup;
+    this.lastFeatures = list;
+    return list;
+  }
+
+  private featuresOn(sup: Support, all: readonly StaticFeature[]): readonly StaticFeature[] {
     const block =
       sup.kind === 'edge'
         ? sup.edge.block
@@ -426,14 +487,34 @@ export class Sim {
   // -------------------------------------------------------------------------------------------
   // Committing time
 
-  private commitAll(span: number): void {
-    this.bodies.forEach((b, i) => {
-      const track = defined(this.tracks[i], 'track');
-      if (!track.moving) return;
-      copyKinematics(b, track.end);
-      if (track.event !== null && track.event.t < span) {
-        throw new PhysicsError('internal', 'a trial event was skipped');
+  /**
+   * Commit every group still on its trial to now (the grid line, or a forced stop). A constant
+   * trial (nothing in the group moves) stays fresh.
+   */
+  private commitEveryone(): void {
+    for (const group of this.groups()) {
+      const lead = defined(group.tracks[0], 'track');
+      if (!lead.fresh) continue;
+      if (group.tracks.some((tr) => tr.moving)) this.commitGroupTo(group, this.tau);
+    }
+  }
+
+  /** Commit the groups an event involves to its time; they make a new trial from there. */
+  private commitInvolved(next: Next): void {
+    for (const group of this.groups()) {
+      if (group.bodies.includes(next.a) || (next.b !== null && group.bodies.includes(next.b))) {
+        this.commitGroupTo(group, next.t);
       }
+    }
+  }
+
+  private commitGroupTo(group: Group, t: number): void {
+    commitGroup(this.world, group.bodies, group.tracks, group.holds, t);
+    group.bodies.forEach((b, i) => {
+      const track = defined(group.tracks[i], 'track');
+      if (track.moving) copyKinematics(b, track.end);
+      track.start = t;
+      track.fresh = false;
     });
   }
 
@@ -442,18 +523,6 @@ export class Sim {
     if (b.motion === 'spinning' && b.s.wz === 0) {
       b.motion = 'resting';
       this.emit('spin-rest', b);
-    }
-  }
-
-  /** Re-integrate every marble from the step's split point to t. */
-  private commitTo(t: number): void {
-    for (const group of this.groups()) {
-      if (!group.tracks.some((tr) => tr.moving)) continue;
-      advanceGroup(this.world, group.bodies, group.tracks, group.holds, t);
-      group.bodies.forEach((b, i) => {
-        const track = defined(group.tracks[i], 'track');
-        if (track.moving) copyKinematics(b, track.end);
-      });
     }
   }
 
@@ -592,6 +661,7 @@ export class Sim {
       case PROBE.release: {
         const h = defined(ev.hold, 'released hold');
         this.holds.splice(this.holds.indexOf(h), 1);
+        this.regroup();
         return;
       }
       case PROBE.rollSlip:
@@ -737,7 +807,10 @@ export class Sim {
     }
     const list = [...bodies].sort((p, q) => p.id - q.id);
     const holds = this.holds.filter((x) => bodies.has(x.a));
-    if (holdNeedNow(this.world, h, list, holds) > 0) this.holds.push(h);
+    if (holdNeedNow(this.world, h, list, holds) > 0) {
+      this.holds.push(h);
+      this.regroup();
+    }
   }
 
   /**
@@ -767,6 +840,7 @@ export class Sim {
       const h = defined(this.holds[i], 'hold');
       if (!bodies.has(h.a) || this.closing(h) <= vRest) continue;
       this.holds.splice(i, 1);
+      this.regroup();
     }
     const constraints: Hold[] = this.holds.filter((h) => bodies.has(h.a));
     // Touching marbles (the pair just resolved among them) block closing too.
@@ -1210,14 +1284,24 @@ export class Sim {
       const g = featureGap(this.world.court, f, b.r, b.s.x, b.s.y, b.s.z, fg);
       if (g.valid && g.gap <= TOUCH) out.push({ x: g.nx, y: g.ny, z: g.nz });
     }
-    for (const o of this.bodies) {
-      if (o === b || o.done) continue;
-      const dx = b.s.x - o.s.x;
-      const dy = b.s.y - o.s.y;
-      const dz = b.s.z - o.s.z;
+    const p = { x: 0, y: 0, z: 0 };
+    this.bodies.forEach((o, i) => {
+      if (o === b || o.done) return;
+      // A marble still on its trial is read where its trial has it now.
+      const tr = defined(this.tracks[i], 'track');
+      if (tr.fresh && tr.moving && tr.start < this.tau)
+        positionAt(pieceAt(tr, this.tau), this.tau, p);
+      else {
+        p.x = o.s.x;
+        p.y = o.s.y;
+        p.z = o.s.z;
+      }
+      const dx = b.s.x - p.x;
+      const dy = b.s.y - p.y;
+      const dz = b.s.z - p.z;
       const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
       if (d - b.r - o.r <= TOUCH) out.push({ x: dx / d, y: dy / d, z: dz / d });
-    }
+    });
     return out;
   }
 
@@ -1242,7 +1326,10 @@ export class Sim {
   private dropHolds(b: Body): void {
     for (let i = this.holds.length - 1; i >= 0; i -= 1) {
       const h = defined(this.holds[i], 'hold');
-      if (h.a === b || h.b === b) this.holds.splice(i, 1);
+      if (h.a === b || h.b === b) {
+        this.holds.splice(i, 1);
+        this.regroup();
+      }
     }
   }
 

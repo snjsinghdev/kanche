@@ -143,11 +143,11 @@ function rateAlong(fg: { gx: number; gy: number; gz: number }): number {
   return fg.gx * ra.x + fg.gy * ra.y + fg.gz * ra.z;
 }
 
-/** First time in [0, tEnd] the gap closes to zero while closing, or Infinity. */
-function firstRoot(world: World, gap: Gap, tEnd: number): number {
+/** First time in [t0, tEnd] the gap closes to zero while closing, or Infinity. */
+function firstRoot(world: World, gap: Gap, t0: number, tEnd: number): number {
   const tol = world.params.thresholds.gapTol;
   const iterations = world.params.solver.advanceIterations;
-  let t = 0;
+  let t = t0;
   // Every round ends at a later time (a breakpoint or past a minimum), so this terminates; the
   // cap is a guard against a broken invariant, not a tuning knob.
   for (let round = 0; round < 100_000; round += 1) {
@@ -250,19 +250,20 @@ function bisectRoot(world: World, gap: Gap, a: number, b: number): number {
 const pairGap = new PairGap();
 const staticGap = new StaticGap();
 
-/** First contact time of two marbles within [0, tEnd], or Infinity. */
+/** First contact time of two marbles within [t0, tEnd] (times inside the step), or Infinity. */
 export function pairContact(
   world: World,
   a: Body,
   ta: Track,
   b: Body,
   tb: Track,
+  t0: number,
   tEnd: number,
 ): number {
   pairGap.a = ta;
   pairGap.b = tb;
   pairGap.radii = a.r + b.r;
-  return firstRoot(world, pairGap, tEnd);
+  return firstRoot(world, pairGap, t0, tEnd);
 }
 
 export interface StaticHit {
@@ -270,12 +271,13 @@ export interface StaticHit {
   feature: StaticFeature | null;
 }
 
-/** First contact of a marble with any of the features within [0, tEnd]. */
+/** First contact of a marble with any of the features within [t0, tEnd]. */
 export function staticContact(
   world: World,
   body: Body,
   track: Track,
   features: readonly StaticFeature[],
+  t0: number,
   tEnd: number,
   out: StaticHit,
 ): StaticHit {
@@ -286,7 +288,7 @@ export function staticContact(
   staticGap.body = body;
   staticGap.track = track;
   staticGap.features = features;
-  const t = firstRoot(world, staticGap, tEnd);
+  const t = firstRoot(world, staticGap, t0, tEnd);
   if (t === Infinity) return out;
   staticGap.eval(t);
   out.t = t;

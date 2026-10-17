@@ -131,7 +131,7 @@ interface Probe {
 }
 
 export interface InternalEvent {
-  /** Time from the start of the advance (s). */
+  /** Time inside the step (s). */
   t: number;
   code: number;
   arg: number;
@@ -141,7 +141,10 @@ export interface InternalEvent {
   body: Body | null;
 }
 
-/** Per-advance scratch: pieces are pooled and reused between advances. */
+/**
+ * A marble's trial through the rest of the step: its substep pieces (pooled and reused), with
+ * times inside the step. A trial stays valid until an event involves its marble (ADR-0006).
+ */
 export interface Track {
   readonly pieces: Piece[];
   count: number;
@@ -151,6 +154,10 @@ export interface Track {
   readonly eventStore: InternalEvent;
   /** False for a marble at rest: its single piece is constant. */
   moving: boolean;
+  /** Time inside the step of the marble's committed state, where the trial starts (s). */
+  start: number;
+  /** Whether the trial is current: false once the marble's state changes at an event. */
+  fresh: boolean;
 }
 
 export function newTrack(): Track {
@@ -161,6 +168,8 @@ export function newTrack(): Track {
     event: null,
     eventStore: { t: 0, code: 0, arg: 0, hold: null, body: null },
     moving: false,
+    start: 0,
+    fresh: false,
   };
 }
 
@@ -445,17 +454,28 @@ const DRAG_SIDE = 1e-3;
 // ---------------------------------------------------------------------------------------------
 // Probes
 
+let probeList: Probe[] = [];
+let probeCount = 0;
+
+function add(code: number, arg: number): void {
+  const p = probeList[probeCount];
+  if (p === undefined) probeList.push({ code, arg });
+  else {
+    p.code = code;
+    p.arg = arg;
+  }
+  probeCount += 1;
+}
+
 function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): number {
-  let n = 0;
-  const add = (code: number, arg: number): void => {
-    const p = probes[n];
-    if (p === undefined) probes.push({ code, arg });
-    else {
-      p.code = code;
-      p.arg = arg;
-    }
-    n += 1;
-  };
+  probeList = probes;
+  probeCount = 0;
+  const n = collectProbes(world, body, ctx);
+  return n;
+}
+
+/** Fill probeList with the probes of a marble's substep; returns their count. */
+function collectProbes(world: World, body: Body, ctx: Ctx): number {
   const sup = ctx.support;
   const court = world.court;
   // A frozen direction on a plane ends at a root of the slip (or speed) along it. A restart from
@@ -465,7 +485,7 @@ function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): numbe
   if (ctx.mode === 'slide' && ctx.slaved) add(PROBE.slaveStop, 0);
   if (ctx.mode === 'roll' && ctx.fixed && !curved && !ctx.restart) add(PROBE.rollStop, 0);
   if (ctx.sgnWz !== 0) add(PROBE.spinStop, 0);
-  if (ctx.mode === 'spin') return n;
+  if (ctx.mode === 'spin') return probeCount;
   if (ctx.mode === 'roll') {
     // A breakpoint matters only where the law changes: neighbours with the same line are one.
     const segs = world.surface.muR.segments;
@@ -479,7 +499,7 @@ function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): numbe
   add(PROBE.outXMax, 0);
   add(PROBE.outYMin, 0);
   add(PROBE.outYMax, 0);
-  if (sup === null) return n;
+  if (sup === null) return probeCount;
   switch (sup.kind) {
     case 'base':
       if (court.heightfield !== undefined) {
@@ -491,9 +511,7 @@ function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): numbe
       if (court.hole !== undefined) add(PROBE.holeEnter, 0);
       break;
     case 'top':
-      sup.block.edges.forEach((_, k) => {
-        add(PROBE.topLeave, k);
-      });
+      for (let k = 0; k < sup.block.edges.length; k += 1) add(PROBE.topLeave, k);
       break;
     case 'floor':
       break;
@@ -519,7 +537,7 @@ function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): numbe
       if (ctx.mode === 'roll') add(PROBE.rollSlip, 0);
       break;
   }
-  return n;
+  return probeCount;
 }
 
 /** The value of a probe at state s (positive until the event). */
@@ -1170,16 +1188,18 @@ const evBest: InternalEvent = { t: 0, code: 0, arg: 0, hold: null, body: null };
 const groupMembers: Member[] = [];
 
 /**
- * Advance a group of marbles (one marble, or marbles joined by holds) by up to `span` seconds,
- * stopping at the first internal event of any member or hold. Fills each member's track with its
- * substep pieces and end state, and returns the event (or null). The marbles are not changed.
+ * Advance a group of marbles (one marble, or marbles joined by holds) from t0 to tEnd (times
+ * inside the step), stopping at the first internal event of any member or hold. Fills each
+ * member's track with its substep pieces and end state, and returns the event (or null). The
+ * marbles are not changed.
  */
 export function advanceGroup(
   world: World,
   bodies: readonly Body[],
   tracks: readonly Track[],
   holds: readonly Hold[],
-  span: number,
+  t0: number,
+  tEnd: number,
 ): InternalEvent | null {
   const count = bodies.length;
   groupMembers.length = count;
@@ -1193,7 +1213,7 @@ export function advanceGroup(
     tr.event = null;
     copyDyn(m.s, b.s);
     // A marble at rest (the common case late in a shot) needs no context at all.
-    m.moving = span > 0 && !b.done && b.motion !== 'resting' && prepareCtx(world, b, m.s, m.ctx);
+    m.moving = tEnd > t0 && !b.done && b.motion !== 'resting' && prepareCtx(world, b, m.s, m.ctx);
     tr.moving = m.moving;
     if (m.moving) anyMoving = true;
   }
@@ -1201,8 +1221,8 @@ export function advanceGroup(
   if (!anyMoving) {
     for (const m of members) {
       const p = piece(m.track);
-      p.t0 = 0;
-      p.t1 = span;
+      p.t0 = t0;
+      p.t1 = tEnd;
       copyDyn(p.s0, m.s);
       copyDyn(p.s1, m.s);
       zeroRates(p.f0);
@@ -1213,7 +1233,7 @@ export function advanceGroup(
   }
   const solver = world.params.solver;
   const th = world.params.thresholds;
-  let t = 0;
+  let t = t0;
   let n = 0;
   let event: InternalEvent | null = null;
   for (let i = 0; i < count; i += 1) {
@@ -1238,7 +1258,7 @@ export function advanceGroup(
       break;
     }
     let h =
-      holds.length === 0 ? span - t : Math.min(span - t, holdLimit(world, members, count, holds));
+      holds.length === 0 ? tEnd - t : Math.min(tEnd - t, holdLimit(world, members, count, holds));
     for (const m of members) {
       if (!m.moving) continue;
       m.probeCount = buildProbes(world, m.body, m.ctx, m.probes);
@@ -1246,10 +1266,12 @@ export function advanceGroup(
       // A restart from zero slip or speed takes a short first substep (ADR-0006).
       if (m.ctx.restart) h = Math.min(h, solver.stopRefine * world.params.dt);
     }
+    // The substep that reaches the end ends exactly there.
+    const t1 = h >= tEnd - t ? tEnd : t + h;
     for (const m of members) {
       const pc = piece(m.track);
       pc.t0 = t;
-      pc.t1 = t + h;
+      pc.t1 = t1;
       copyDyn(pc.s0, m.s);
       copyDyn(pc.f0, m.f);
     }
@@ -1269,7 +1291,7 @@ export function advanceGroup(
         }
       }
     }
-    if (holds.length > 0 && firstRelease(world, members, count, holds, t, t + h, evScratch)) {
+    if (holds.length > 0 && firstRelease(world, members, count, holds, t, t1, evScratch)) {
       if (!found || evScratch.t < evBest.t) {
         evBest.t = evScratch.t;
         evBest.code = evScratch.code;
@@ -1280,7 +1302,7 @@ export function advanceGroup(
       }
     }
     if (found) {
-      if (evBest.t < t + h) {
+      if (evBest.t < t1) {
         // Re-integrate from the substep's start to the event, so the event state is RK4's.
         for (const m of members) {
           const pc = defined(m.track.pieces[m.track.count - 1], 'piece');
@@ -1292,7 +1314,7 @@ export function advanceGroup(
       for (const m of members) copyDyn(m.s, defined(m.track.pieces[m.track.count - 1], 'piece').s1);
       break;
     }
-    t += h;
+    t = t1;
     let stopped: Member | undefined;
     for (const m of members) {
       const pc = defined(m.track.pieces[m.track.count - 1], 'piece');
@@ -1315,7 +1337,7 @@ export function advanceGroup(
       event = evBest;
       break;
     }
-    if (t >= span) break;
+    if (t >= tEnd) break;
     // Rebuild the contexts: frozen directions and spin signs may change between substeps.
     let still = false;
     for (let i = 0; i < count; i += 1) {
@@ -1374,25 +1396,72 @@ export function holdNeedNow(
 
 const needTracks: Track[] = [];
 
-/** The constant track of a marble that does not move during the span. */
-export function restTrack(body: Body, track: Track, span: number): void {
+/**
+ * Commit a group to time t inside its current trial: the trial's substeps before t are exactly
+ * what re-integrating to t would repeat, so only the substep holding t is integrated again, from
+ * its start to t. That partial substep looks for no events (a probe it crosses fires at the start
+ * of the next trial). Leaves each member's state at t in its track's end.
+ */
+export function commitGroup(
+  world: World,
+  bodies: readonly Body[],
+  tracks: readonly Track[],
+  holds: readonly Hold[],
+  t: number,
+): void {
+  const lead = defined(tracks[0], 'group track');
+  const last = defined(lead.pieces[lead.count - 1], 'piece');
+  if (t > last.t1 || t < defined(lead.pieces[0], 'piece').t0) {
+    throw new PhysicsError('internal', 'commit outside the trial');
+  }
+  if (t === last.t1 || !tracks.some((tr) => tr.moving)) return;
+  let k = 0;
+  while (t >= defined(lead.pieces[k], 'piece').t1) k += 1;
+  const count = bodies.length;
+  groupMembers.length = count;
+  for (let i = 0; i < count; i += 1) {
+    const b = defined(bodies[i], 'group body');
+    const tr = defined(tracks[i], 'group track');
+    const m = member(i, b, tr);
+    groupMembers[i] = m;
+    const pc = defined(tr.pieces[k], 'piece');
+    copyDyn(m.s, pc.s0);
+    copyDyn(m.f, pc.f0);
+    m.moving = tr.moving && prepareCtx(world, b, m.s, m.ctx);
+    tr.count = k + 1;
+  }
+  const t0 = defined(lead.pieces[k], 'piece').t0;
+  if (t === t0) {
+    for (let i = 0; i < count; i += 1) {
+      const m = defined(groupMembers[i], 'member');
+      copyDyn(m.track.end, m.s);
+    }
+    return;
+  }
+  for (let i = 0; i < count; i += 1) {
+    defined(defined(tracks[i], 'group track').pieces[k], 'piece').t1 = t;
+  }
+  world.metrics.substeps += 1;
+  groupRk4(world, groupMembers, count, holds, t - t0);
+  for (let i = 0; i < count; i += 1) {
+    const m = defined(groupMembers[i], 'member');
+    copyDyn(m.track.end, defined(m.track.pieces[k], 'piece').s1);
+  }
+}
+
+/** The constant track of a marble that does not move from t0 to tEnd. */
+export function restTrack(body: Body, track: Track, t0: number, tEnd: number): void {
   track.count = 0;
   track.event = null;
   track.moving = false;
   const p = piece(track);
-  p.t0 = 0;
-  p.t1 = span;
+  p.t0 = t0;
+  p.t1 = tEnd;
   copyDyn(p.s0, body.s);
   copyDyn(p.s1, body.s);
   zeroRates(p.f0);
   zeroRates(p.f1);
   copyDyn(track.end, body.s);
-}
-
-/** Advance one marble on its own (a group of one, no holds). */
-export function advance(world: World, body: Body, span: number, track: Track): Track {
-  advanceGroup(world, [body], [track], [], span);
-  return track;
 }
 
 function zeroRates(f: Dyn): void {

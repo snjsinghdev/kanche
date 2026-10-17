@@ -368,3 +368,23 @@ describe('edges and corners', () => {
     sane(r);
   });
 });
+
+describe('locality', () => {
+  it("a marble's motion does not depend on events it takes no part in", () => {
+    // Marble 1 slides into a roll across open ground. Far away, 2 strikes 3, and both bounce off
+    // a wall: their events must not split marble 1's integration.
+    const court: CourtSpec = { ...flat(2), walls: [{ x1: 1.5, y1: 0.5, x2: 1.5, y2: 1.9 }] };
+    const lone: MarbleInit = { id: 1, size: 'r95', x: -1.5, y: -1.5, vx: 0.9, vy: 0.4, wz: 30 };
+    const others: MarbleInit[] = [
+      { id: 2, size: 'r80', x: 0.6, y: 1.2, vx: 1.6, vy: 0.05 },
+      { id: 3, size: 'r110', x: 1, y: 1.2 },
+    ];
+    const alone = run(court, [lone]);
+    const crowd = run(court, [lone, ...others]);
+    expect(crowd.events.filter((e) => e.kind === 'impact' && e.a !== 1).length).toBeGreaterThan(2);
+    expect(crowd.final[0]).toEqual(alone.final[0]);
+    const own = (r: ShotResult) => r.events.filter((e) => e.kind !== 'impact' && e.id === 1);
+    expect(own(crowd)).toEqual(own(alone));
+    sane(crowd);
+  });
+});
