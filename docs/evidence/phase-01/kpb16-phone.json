@@ -1,0 +1,14 @@
+{
+  "test": "KPB 16: a 16-marble break",
+  "physicsVersion": 1,
+  "device": "OnePlus CPH2467 (Snapdragon 695, SM6375; Android 15)",
+  "browser": "Chrome 155 (user agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36)",
+  "how": "apps/client/lab.html (vite build --mode e2e) served from the laptop over adb reverse; window.__kancheLab.bench(100) after 20 warm-up runs",
+  "median": 29.6,
+  "min": 24.3,
+  "p90": 31.2,
+  "runs": 100,
+  "unit": "ms",
+  "hash": "b2396155f54ebc61",
+  "earlier": "28.1 ms median before 6e409e8 (hash 35260dacdb2ad020)"
+}
