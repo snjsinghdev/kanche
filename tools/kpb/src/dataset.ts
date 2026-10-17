@@ -6,12 +6,11 @@
  * Hand-validated: the dataset is data, and a malformed one must fail loudly before any fit.
  */
 import {
-  SURFACES,
+  buildCourt,
   type CourtSpec,
   type MarbleInit,
   type ParamOverrides,
   type SizeClass,
-  type SurfaceId,
 } from '@kanche/physics';
 
 export const DATASET_SCHEMA = 'kanche-kpb-dataset/1';
@@ -103,10 +102,12 @@ function validateRecording(where: string, r: unknown, seen: Set<string>): void {
   if (finite(`${where}.fps`, r['fps']) <= 0) fail(where, 'fps must be positive');
   const court = r['court'];
   if (!isObject(court)) fail(where, 'needs a court');
-  // The rest of the court is checked by the simulation, but an unknown surface would only fail
-  // later, inside a fit or a score.
-  if (!SURFACES.includes(court['surface'] as SurfaceId)) {
-    fail(where, `court.surface must be one of ${SURFACES.join(', ')}`);
+  // The court is checked as the simulation will build it, so a bad one fails here rather than
+  // later, inside a fit or a score. A court of the wrong shape can throw any error there.
+  try {
+    buildCourt(court as unknown as CourtSpec);
+  } catch (e) {
+    fail(where, `court: ${e instanceof Error ? e.message : String(e)}`);
   }
   const marbles = r['marbles'];
   if (!Array.isArray(marbles) || marbles.length === 0) fail(where, 'needs marbles');

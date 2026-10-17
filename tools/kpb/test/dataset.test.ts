@@ -56,10 +56,14 @@ describe('the dataset format', () => {
     expect(() => validateDataset(json)).toThrow(DatasetError);
   });
 
-  it('names an unknown court surface, from an import or an old file', () => {
+  it('checks the court as the simulation builds it, from an import or an old file', () => {
     const r = good();
-    const json = dataset([{ ...r, court: { ...(r['court'] as object), surface: 'grass' } }]);
-    expect(() => validateDataset(json)).toThrow(/court\.surface must be one of cement/);
+    const court = r['court'] as Record<string, unknown>;
+    const withCourt = (c: unknown) => () => validateDataset(dataset([{ ...r, court: c }]));
+    expect(withCourt({ ...court, surface: 'grass' })).toThrow(/court: unknown surface "grass"/);
+    const inverted = { xMin: 1, xMax: -1, yMin: -1, yMax: 1 };
+    expect(withCourt({ ...court, bounds: inverted })).toThrow(/court: bounds must be/);
+    expect(withCourt({ surface: 'tile' })).toThrow(DatasetError);
   });
 
   it("insists on the shooter's track", () => {
