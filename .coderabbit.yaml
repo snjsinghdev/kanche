@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews every PR (CLAUDE.md, "Workflow"). Path instructions carry the local rules.
+language: en-GB
+tone_instructions: 'Be direct and specific. Name the rule, the file and the fix. No praise, no filler.'
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  review_status: true
+  collapse_walkthrough: false
+  poem: false
+  in_progress_fortune: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - '^main$'
+  path_filters:
+    - '!**/pnpm-lock.yaml'
+    - '!**/deno.lock'
+    - '!apps/client/android/app/src/main/assets/**'
+    - '!apps/client/ios/App/App/public/**'
+    - '!docs/prompt-pack/**'
+    - '!docs/evidence/**'
+  path_instructions:
+    - path: 'packages/{physics,rules,ai}/src/**'
+      instructions: |
+        Simulation code shared by the app, the AI and the server; a shot must resolve bit-for-bit
+        the same in V8, JavaScriptCore and SpiderMonkey (ADR-0004).
+        - Determinism: only + - * /, Math.sqrt/abs/min/max/floor/ceil/trunc/round/sign/imul/fround/clz32
+          and Math constants. No Math.random, Date, performance, timers, Intl, toLocale*, localeCompare,
+          ** or Math.pow/exp/log/sin/cos/tan/atan2/hypot/cbrt, and no sort() without a comparator. Flag
+          anything the lint could miss: iteration order of objects keyed by numbers-as-strings, Map/Set
+          order assumptions across code paths, floating-point reassociation, reading uninitialised typed arrays.
+        - Inputs are integers (shot inputs, seeds); randomness comes only from the seeded Rng.
+        - Non-finite values must fail fast, never propagate silently.
+        - SI units throughout (m, s, kg, rad, N); every physical constant states its unit in a comment.
+        - No DOM, Node, PixiJS, Capacitor or Supabase imports; package boundaries per docs/ARCHITECTURE.md.
+        - Any change that can alter an outcome must bump physicsVersion, rulesVersion or aiVersion.
+        - Tests: the coverage gate is 90% lines and branches; prefer property tests (fast-check) and
+          golden values that are cross-checked against an independent implementation.
+    - path: 'packages/marble-gen/src/genome/**'
+      instructions: |
+        Genome code is simulation code: the same seed must draw the same marble everywhere. Apply the
+        same determinism rules as packages/physics, and bump genomeVersion for any derivation change.
+    - path: 'supabase/**'
+      instructions: |
+        The server owns marbles (CLAUDE.md).
+        - Every table has RLS enabled with explicit policies; clients never write ownership.
+        - Every marble ownership change is an append-only ledger event written in one transaction; no UPDATE
+          or DELETE on ledger rows. Check invariants: each marble has exactly one owner, stakes are escrowed,
+          and totals are conserved.
+        - Edge Functions re-run shots with the shared core at the match's pinned physicsVersion/rulesVersion
+          before any marble changes hands.
+        - No secrets in code or migrations; service-role keys only in function env.
+        - Marbles, glass rods and furnace fuel are never sold or won through paid randomness.
+    - path: 'apps/client/**'
+      instructions: |
+        - Performance budgets are tests (budgets.json): watch initial JS size, allocations per frame,
+          texture memory and work on the main thread; the target is 30 fps p95 on a low-end Android phone.
+        - Accessibility: core actions read without words; tap targets large enough for a thumb; respect
+          reduced motion; colour is never the only signal; canvas elements have accessible names.
+        - Safe areas and the 270x480 integer-first viewport (ADR-0002) must hold on notched and small screens.
+        - Child mode limits data, stakes and notifications; no analytics that child mode forbids.
+        - Never write marble ownership from the client.
+    - path: '**/*.test.ts'
+      instructions: |
+        Tests must fail for the right reason: check that assertions would catch a regression, that
+        property tests constrain the property they claim, and that golden values are justified.
+    - path: '.github/workflows/**'
+      instructions: |
+        Actions are pinned to full commit SHAs with the version in a comment; permissions are least-privilege;
+        job names are the required-check names in tools/scripts/require-checks.sh.
+
+chat:
+  auto_reply: true

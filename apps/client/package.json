@@ -1,0 +1,29 @@
+{
+  "name": "@kanche/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Kanche app: PixiJS renderer, shipped to Android and iOS through Capacitor and to the web.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --coverage",
+    "e2e": "vite build --mode e2e --outDir dist-e2e && playwright test",
+    "android:debug": "vite build --mode debug && cap sync android && cd android && ./gradlew assembleDebug",
+    "ios:sync": "vite build --mode debug && cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@kanche/physics": "workspace:*",
+    "@kanche/rules": "workspace:*",
+    "pixi.js": "8.22.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@kanche/testkit": "workspace:*",
+    "vite": "8.3.4"
+  }
+}

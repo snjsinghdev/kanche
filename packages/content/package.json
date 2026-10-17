@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/content",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Content as data: courts, marble series and events, with their schemas.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

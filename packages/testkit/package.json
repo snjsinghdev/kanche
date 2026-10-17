@@ -1,0 +1,14 @@
+{
+  "name": "@kanche/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared test infrastructure: the Vitest preset and helpers. Imports no other @kanche package, so every package can use it.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vitest": "./src/vitest-preset.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  }
+}

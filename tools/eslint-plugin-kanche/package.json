@@ -1,0 +1,16 @@
+{
+  "name": "eslint-plugin-kanche",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kanche's local ESLint rules: the determinism contract for simulation code (ADR-0004).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

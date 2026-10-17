@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+dist/
+dist-e2e/
+dist-types/
+coverage/
+playwright-report/
+test-results/
+.turbo/
+apps/client/android/
+apps/client/ios/
+docs/prompt-pack/
+supabase/.temp/
+supabase/.branches/

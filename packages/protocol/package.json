@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wire formats between the app and the server: shot inputs, challenges and claims.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

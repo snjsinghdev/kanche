@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/rules",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Game rules for Ring, Hit and Hole: turns, the lag, stakes and transfers. Deterministic; shared by app, AI and server.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}

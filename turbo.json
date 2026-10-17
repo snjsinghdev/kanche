@@ -1,0 +1,37 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "agentGuidance": false,
+  "globalDependencies": ["tsconfig.base.json", ".nvmrc"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "src/**",
+        "test/**",
+        "vitest.config.ts",
+        "package.json",
+        "deno.json",
+        "functions/**"
+      ],
+      "outputs": ["coverage/**"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "public/**",
+        "index.html",
+        "vite.config.ts",
+        "package.json",
+        "../../.env.example"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "harness": {
+      "cache": false
+    },
+    "e2e": {
+      "dependsOn": ["build"],
+      "cache": false
+    }
+  }
+}
