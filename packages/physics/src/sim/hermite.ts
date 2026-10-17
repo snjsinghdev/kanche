@@ -162,19 +162,17 @@ export function extendBox(
   box: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number },
 ): void {
   const h = (p.t1 - p.t0) / 3;
-  const xs = [p.s0.x, p.s0.x + h * p.f0.x, p.s1.x - h * p.f1.x, p.s1.x];
-  const ys = [p.s0.y, p.s0.y + h * p.f0.y, p.s1.y - h * p.f1.y, p.s1.y];
-  const zs = [p.s0.z, p.s0.z + h * p.f0.z, p.s1.z - h * p.f1.z, p.s1.z];
-  for (const x of xs) {
-    box.xMin = Math.min(box.xMin, x);
-    box.xMax = Math.max(box.xMax, x);
-  }
-  for (const y of ys) {
-    box.yMin = Math.min(box.yMin, y);
-    box.yMax = Math.max(box.yMax, y);
-  }
-  for (const z of zs) {
-    box.zMin = Math.min(box.zMin, z);
-    box.zMax = Math.max(box.zMax, z);
-  }
+  const { s0, s1, f0, f1 } = p;
+  const x1 = s0.x + h * f0.x;
+  const x2 = s1.x - h * f1.x;
+  const y1 = s0.y + h * f0.y;
+  const y2 = s1.y - h * f1.y;
+  const z1 = s0.z + h * f0.z;
+  const z2 = s1.z - h * f1.z;
+  box.xMin = Math.min(box.xMin, s0.x, x1, x2, s1.x);
+  box.xMax = Math.max(box.xMax, s0.x, x1, x2, s1.x);
+  box.yMin = Math.min(box.yMin, s0.y, y1, y2, s1.y);
+  box.yMax = Math.max(box.yMax, s0.y, y1, y2, s1.y);
+  box.zMin = Math.min(box.zMin, s0.z, z1, z2, s1.z);
+  box.zMax = Math.max(box.zMax, s0.z, z1, z2, s1.z);
 }

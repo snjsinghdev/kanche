@@ -34,6 +34,7 @@ import {
   type Ctx,
 } from './derivative.ts';
 import { axpy, copyDyn, newDyn, rk4Combine, type Dyn } from './dyn.ts';
+import { MAX_EXACT, solveLcp } from './lcp.ts';
 import {
   holdGeometry,
   newHoldGeo,
@@ -57,6 +58,8 @@ export interface Metrics {
   forcedRest: boolean;
   cellCrossings: number;
   tableCrossings: number;
+  /** Contacts found on the trial curves that the committed state showed apart. */
+  staleContacts: number;
 }
 
 export function newMetrics(): Metrics {
@@ -72,6 +75,7 @@ export function newMetrics(): Metrics {
     forcedRest: false,
     cellCrossings: 0,
     tableCrossings: 0,
+    staleContacts: 0,
   };
 }
 
@@ -401,22 +405,42 @@ function stepLimit(world: World, ctx: Ctx, s: Dyn, f: Dyn): number {
     }
   }
   if (ctx.fixed) return limit;
-  const alpha = solver.stopRefine;
   if (ctx.mode === 'slide') {
     const ux = s.vx - ctx.r * s.wy;
     const uy = s.vy + ctx.r * s.wx;
     const dux = f.vx - ctx.r * f.wy;
     const duy = f.vy + ctx.r * f.wx;
     const rate = Math.sqrt(dux * dux + duy * duy);
-    return Math.min(limit, (alpha * Math.sqrt(ux * ux + uy * uy)) / rate);
+    const u = Math.sqrt(ux * ux + uy * uy);
+    // p: how hard the side force turns the slip, against the friction rate k = (7/2)·muS·g.
+    const side = Math.abs(dux * (uy / u) - duy * (ux / u));
+    const alpha = stopFraction(solver.stopRefine, side / (3.5 * ctx.muS * ctx.g));
+    return Math.min(limit, (alpha * u) / rate);
   }
   if (ctx.mode === 'roll') {
     const v = Math.sqrt(s.vx * s.vx + s.vy * s.vy + s.vz * s.vz);
     const a = Math.sqrt(f.vx * f.vx + f.vy * f.vy + f.vz * f.vz);
-    return a > 0 ? Math.min(limit, (alpha * v) / a) : limit;
+    if (!(a > 0)) return limit;
+    const side = Math.abs(f.vx * s.vy - f.vy * s.vx) / v;
+    const k = (ctx.rollA + ctx.rollB * v) * ctx.g;
+    const alpha = stopFraction(solver.stopRefine, k > 0 ? side / k : 1);
+    return Math.min(limit, (alpha * v) / a);
   }
   return limit;
 }
+
+/**
+ * The fraction of the remaining slip (or speed) one substep may use near a Coulomb stop. A side
+ * force of drag's size (p < DRAG_SIDE: a slip not parallel to the velocity) barely turns the
+ * direction, and halving per substep is accurate; a real side force (a slope) needs the fine
+ * refinement (ADR-0006).
+ */
+function stopFraction(stopRefine: number, p: number): number {
+  return p < DRAG_SIDE ? 0.5 : stopRefine;
+}
+
+/** Side-force ratio below which a stop needs no fine refinement (–). */
+const DRAG_SIDE = 1e-3;
 
 // ---------------------------------------------------------------------------------------------
 // Probes
@@ -443,9 +467,13 @@ function buildProbes(world: World, body: Body, ctx: Ctx, probes: Probe[]): numbe
   if (ctx.sgnWz !== 0) add(PROBE.spinStop, 0);
   if (ctx.mode === 'spin') return n;
   if (ctx.mode === 'roll') {
-    const seg = defined(world.surface.muR.segments[body.rollSeg], 'rolling segment');
-    if (Number.isFinite(seg.x1)) add(PROBE.segUp, 0);
-    if (Number.isFinite(seg.x0)) add(PROBE.segDown, 0);
+    // A breakpoint matters only where the law changes: neighbours with the same line are one.
+    const segs = world.surface.muR.segments;
+    const seg = defined(segs[body.rollSeg], 'rolling segment');
+    const up = segs[body.rollSeg + 1];
+    const down = segs[body.rollSeg - 1];
+    if (up !== undefined && (up.a !== seg.a || up.b !== seg.b)) add(PROBE.segUp, 0);
+    if (down !== undefined && (down.a !== seg.a || down.b !== seg.b)) add(PROBE.segDown, 0);
   }
   add(PROBE.outXMin, 0);
   add(PROBE.outXMax, 0);
@@ -660,9 +688,20 @@ function holeRoot(world: World, pc: Piece): number {
     t += g / bound;
     if (t > pc.t1) return Infinity;
   }
-  // The advancement stalled near a grazing pass: take the end-point sign as the answer.
+  // The advancement stalled (a near-tangent pass): bisect between the last point outside and the
+  // end of the piece, if the end is inside.
   positionAt(pc, pc.t1, posScratch);
-  return holeRadial(hole, posScratch.x, posScratch.y) - hole.rc <= 0 ? pc.t1 : Infinity;
+  if (holeRadial(hole, posScratch.x, posScratch.y) - hole.rc > 0) return Infinity;
+  let lo = t;
+  let hi = pc.t1;
+  for (let i = 0; i < iterations; i += 1) {
+    const mid = 0.5 * (lo + hi);
+    if (!(mid > lo && mid < hi)) break;
+    positionAt(pc, mid, posScratch);
+    if (holeRadial(hole, posScratch.x, posScratch.y) - hole.rc > 0) lo = mid;
+    else hi = mid;
+  }
+  return hi;
 }
 
 /** Earliest probe event of one member inside its piece, written into `out`; true if found. */
@@ -769,46 +808,138 @@ function groupDerivative(
     else zeroRates(fOut);
   }
   if (holds.length === 0) return;
+  if (holds.length > 1 && holds.length <= MAX_EXACT && exactHolds(world, members, count, holds))
+    return;
   const sweeps = holds.length > 1 ? world.params.solver.heldSweeps : 1;
   const lambda = holdLambda;
   lambda.length = holds.length;
   lambda.fill(0);
   for (let sweep = 0; sweep < sweeps; sweep += 1) {
     holds.forEach((h, hi) => {
-      const ia = indexOf(members, count, h.a);
-      const ib = h.b === null ? -1 : indexOf(members, count, h.b);
-      const ma = defined(members[ia], 'held member');
-      const mb = ib < 0 ? null : defined(members[ib], 'held member');
-      const sa = defined(gIn[ia], 'stage state');
-      const sb = ib < 0 ? null : defined(gIn[ib], 'stage state');
-      const fa = defined(gOut[ia], 'stage rate');
-      const fb = ib < 0 ? null : defined(gOut[ib], 'stage rate');
-      const ta = trueState(ma.ctx, ma.moving, sa, trueA);
-      const tb = mb === null || sb === null ? null : trueState(mb.ctx, mb.moving, sb, trueB);
-      const geo = holdGeometry(world, h, ta, tb, holdGeo);
-      if (!geo.valid) return;
-      const { nx, ny, nz } = geo;
-      trueAccel(ma.ctx, ma.moving, sa, fa, accA);
-      let an = accA.x * nx + accA.y * ny + accA.z * nz;
-      if (mb !== null && sb !== null && fb !== null) {
-        trueAccel(mb.ctx, mb.moving, sb, fb, accB);
-        an -= accB.x * nx + accB.y * ny + accB.z * nz;
-      }
-      const k =
-        responseAlong(ma.ctx, ma.moving, sa, nx, ny, nz) +
-        (mb === null || sb === null ? 0 : responseAlong(mb.ctx, mb.moving, sb, nx, ny, nz));
+      const k = holdRow(world, members, count, h);
       if (k === 0) return;
       const old = defined(lambda[hi], 'lambda');
-      const next = Math.max(0, old - (an + geo.c) / k);
+      const next = Math.max(0, old - (rowAn + rowGeo.c) / k);
       const d = next - old;
       lambda[hi] = next;
-      if (d === 0) return;
-      respond(ma.ctx, ma.moving, sa, fa, d * nx, d * ny, d * nz);
-      if (mb !== null && sb !== null && fb !== null) {
-        respond(mb.ctx, mb.moving, sb, fb, -d * nx, -d * ny, -d * nz);
-      }
+      if (d !== 0) pushHold(members, count, h, d);
     });
   }
+}
+
+const rowGeo = newHoldGeo();
+let rowAn = 0;
+
+/**
+ * For one hold at the group's current stage (states gIn, rates gOut): its normal and curvature
+ * (rowGeo), the gap's current acceleration along the normal (rowAn), and the response of that
+ * acceleration to a unit hold force (returned; 0 when nothing can move).
+ */
+function holdRow(world: World, members: readonly Member[], count: number, h: Hold): number {
+  const ia = indexOf(members, count, h.a);
+  const ib = h.b === null ? -1 : indexOf(members, count, h.b);
+  const ma = defined(members[ia], 'held member');
+  const mb = ib < 0 ? null : defined(members[ib], 'held member');
+  const sa = defined(gIn[ia], 'stage state');
+  const sb = ib < 0 ? null : defined(gIn[ib], 'stage state');
+  const fa = defined(gOut[ia], 'stage rate');
+  const fb = ib < 0 ? null : defined(gOut[ib], 'stage rate');
+  const ta = trueState(ma.ctx, ma.moving, sa, trueA);
+  const tb = mb === null || sb === null ? null : trueState(mb.ctx, mb.moving, sb, trueB);
+  const geo = holdGeometry(world, h, ta, tb, rowGeo);
+  if (!geo.valid) return 0;
+  const { nx, ny, nz } = geo;
+  trueAccel(ma.ctx, ma.moving, sa, fa, accA);
+  rowAn = accA.x * nx + accA.y * ny + accA.z * nz;
+  if (mb !== null && sb !== null && fb !== null) {
+    trueAccel(mb.ctx, mb.moving, sb, fb, accB);
+    rowAn -= accB.x * nx + accB.y * ny + accB.z * nz;
+  }
+  return (
+    responseAlong(ma.ctx, ma.moving, sa, nx, ny, nz) +
+    (mb === null || sb === null ? 0 : responseAlong(mb.ctx, mb.moving, sb, nx, ny, nz))
+  );
+}
+
+/** Apply a hold force d along the hold's normal (rowGeo must be current for h). */
+function pushHold(members: readonly Member[], count: number, h: Hold, d: number): void {
+  const ia = indexOf(members, count, h.a);
+  const ib = h.b === null ? -1 : indexOf(members, count, h.b);
+  const ma = defined(members[ia], 'held member');
+  const { nx, ny, nz } = rowGeo;
+  respond(
+    ma.ctx,
+    ma.moving,
+    defined(gIn[ia], 'stage state'),
+    defined(gOut[ia], 'stage rate'),
+    d * nx,
+    d * ny,
+    d * nz,
+  );
+  if (ib >= 0) {
+    const mb = defined(members[ib], 'held member');
+    respond(
+      mb.ctx,
+      mb.moving,
+      defined(gIn[ib], 'stage state'),
+      defined(gOut[ib], 'stage rate'),
+      -d * nx,
+      -d * ny,
+      -d * nz,
+    );
+  }
+}
+
+const rateCopy: Dyn[] = [];
+
+/**
+ * Several holds at once, solved exactly as an LCP on the gaps' accelerations:
+ * w = (a_n + c) + A·λ ≥ 0, λ ≥ 0, λ·w = 0, with A measured by applying unit hold forces.
+ * Returns false when no active set fits (the caller falls back to Gauss–Seidel).
+ */
+function exactHolds(
+  world: World,
+  members: readonly Member[],
+  count: number,
+  holds: readonly Hold[],
+): boolean {
+  const n = holds.length;
+  for (let i = 0; i < count; i += 1) {
+    let c = rateCopy[i];
+    if (c === undefined) {
+      c = newDyn();
+      rateCopy.push(c);
+    }
+    copyDyn(c, defined(gOut[i], 'stage rate'));
+  }
+  const restoreRates = (): void => {
+    for (let i = 0; i < count; i += 1)
+      copyDyn(defined(gOut[i], 'stage rate'), defined(rateCopy[i], 'copy'));
+  };
+  const q: number[] = [];
+  for (const h of holds) {
+    holdRow(world, members, count, h);
+    q.push(rowAn + rowGeo.c);
+  }
+  const a = holds.map(() => new Array<number>(n).fill(0));
+  holds.forEach((hj, j) => {
+    holdRow(world, members, count, hj);
+    pushHold(members, count, hj, 1);
+    holds.forEach((hi, i) => {
+      holdRow(world, members, count, hi);
+      defined(a[i], 'row')[j] = rowAn + rowGeo.c - defined(q[i], 'q');
+    });
+    restoreRates();
+  });
+  const lambda = solveLcp(a, q, 1e-12);
+  if (lambda === null) return false;
+  holds.forEach((h, i) => {
+    const l = defined(lambda[i], 'lambda');
+    if (l <= 0) return;
+    holdRow(world, members, count, h);
+    pushHold(members, count, h, l);
+  });
+  return true;
 }
 
 const trueA = newDyn();
@@ -860,16 +991,32 @@ function holdNeed(world: World, members: readonly Member[], count: number, h: Ho
   const ib = h.b === null ? -1 : indexOf(members, count, h.b);
   const ma = defined(members[ia], 'held member');
   const mb = ib < 0 ? null : defined(members[ib], 'held member');
+  const fa = defined(gOut[ia], 'stage rate');
+  const fb = ib < 0 ? null : defined(gOut[ib], 'stage rate');
+  if (ma.moving) derivative(ma.ctx, defined(gIn[ia], 'stage state'), fa);
+  else zeroRates(fa);
+  if (mb !== null && fb !== null) {
+    if (mb.moving) derivative(mb.ctx, defined(gIn[ib], 'stage state'), fb);
+    else zeroRates(fb);
+  }
+  return holdNeedWithRates(world, members, count, h);
+}
+
+/** The force a hold needs given the members' current rates in gOut (N); > 0 is pressing. */
+function holdNeedWithRates(
+  world: World,
+  members: readonly Member[],
+  count: number,
+  h: Hold,
+): number {
+  const ia = indexOf(members, count, h.a);
+  const ib = h.b === null ? -1 : indexOf(members, count, h.b);
+  const ma = defined(members[ia], 'held member');
+  const mb = ib < 0 ? null : defined(members[ib], 'held member');
   const sa = defined(gIn[ia], 'stage state');
   const sb = ib < 0 ? null : defined(gIn[ib], 'stage state');
   const fa = defined(gOut[ia], 'stage rate');
   const fb = ib < 0 ? null : defined(gOut[ib], 'stage rate');
-  if (ma.moving) derivative(ma.ctx, sa, fa);
-  else zeroRates(fa);
-  if (mb !== null && sb !== null && fb !== null) {
-    if (mb.moving) derivative(mb.ctx, sb, fb);
-    else zeroRates(fb);
-  }
   const ta = trueState(ma.ctx, ma.moving, sa, trueA);
   const tb = mb === null || sb === null ? null : trueState(mb.ctx, mb.moving, sb, trueB);
   const geo = holdGeometry(world, h, ta, tb, holdGeo);
@@ -1045,9 +1192,10 @@ export function advanceGroup(
     tr.count = 0;
     tr.event = null;
     copyDyn(m.s, b.s);
-    m.moving = span > 0 && prepareCtx(world, b, m.s, m.ctx);
+    // A marble at rest (the common case late in a shot) needs no context at all.
+    m.moving = span > 0 && !b.done && b.motion !== 'resting' && prepareCtx(world, b, m.s, m.ctx);
     tr.moving = m.moving;
-    anyMoving ||= m.moving;
+    if (m.moving) anyMoving = true;
   }
   const members = groupMembers;
   if (!anyMoving) {
@@ -1068,10 +1216,11 @@ export function advanceGroup(
   let t = 0;
   let n = 0;
   let event: InternalEvent | null = null;
-  members.forEach((m, i) => {
+  for (let i = 0; i < count; i += 1) {
+    const m = defined(members[i], 'member');
     gIn[i] = m.s;
     gOut[i] = m.f;
-  });
+  }
   groupDerivative(world, members, count, holds);
   for (;;) {
     n += 1;
@@ -1082,14 +1231,14 @@ export function advanceGroup(
       evBest.code = PROBE.substepCap;
       evBest.arg = 0;
       evBest.hold = null;
-      evBest.body = defined(
-        members.find((m) => m.moving),
-        'moving member',
-      ).body;
+      let owner: Member | undefined;
+      for (const m of members) if (owner === undefined && m.moving) owner = m;
+      evBest.body = defined(owner, 'moving member').body;
       event = evBest;
       break;
     }
-    let h = Math.min(span - t, holdLimit(world, members, count, holds));
+    let h =
+      holds.length === 0 ? span - t : Math.min(span - t, holdLimit(world, members, count, holds));
     for (const m of members) {
       if (!m.moving) continue;
       m.probeCount = buildProbes(world, m.body, m.ctx, m.probes);
@@ -1196,26 +1345,48 @@ export function advanceGroup(
   return null;
 }
 
-const needTrack = newTrack();
-const needTrack2 = newTrack();
-
 /** The force a new or existing hold needs at the marbles' current states (N); > 0 is pressing. */
-export function holdNeedNow(world: World, h: Hold): number {
-  const ma = member(0, h.a, needTrack);
-  copyDyn(ma.s, h.a.s);
-  ma.moving = prepareCtx(world, h.a, ma.s, ma.ctx);
-  gIn[0] = ma.s;
-  gOut[0] = ma.f;
-  let count = 1;
-  if (h.b !== null) {
-    const mb = member(1, h.b, needTrack2);
-    copyDyn(mb.s, h.b.s);
-    mb.moving = prepareCtx(world, h.b, mb.s, mb.ctx);
-    gIn[1] = mb.s;
-    gOut[1] = mb.f;
-    count = 2;
+export function holdNeedNow(
+  world: World,
+  h: Hold,
+  bodies: readonly Body[],
+  holds: readonly Hold[],
+): number {
+  // The whole group the new hold would join, with its existing holds acting: a marble squeezed
+  // between a wall and a held partner needs the wall only because of the partner's push.
+  const count = bodies.length;
+  for (let i = 0; i < count; i += 1) {
+    const b = defined(bodies[i], 'group body');
+    let tr = needTracks[i];
+    if (tr === undefined) {
+      tr = newTrack();
+      needTracks.push(tr);
+    }
+    const m = member(i, b, tr);
+    copyDyn(m.s, b.s);
+    m.moving = !b.done && b.motion !== 'resting' && prepareCtx(world, b, m.s, m.ctx);
+    gIn[i] = m.s;
+    gOut[i] = m.f;
   }
-  return holdNeed(world, memberPool, count, h);
+  groupDerivative(world, memberPool, count, holds);
+  return holdNeedWithRates(world, memberPool, count, h);
+}
+
+const needTracks: Track[] = [];
+
+/** The constant track of a marble that does not move during the span. */
+export function restTrack(body: Body, track: Track, span: number): void {
+  track.count = 0;
+  track.event = null;
+  track.moving = false;
+  const p = piece(track);
+  p.t0 = 0;
+  p.t1 = span;
+  copyDyn(p.s0, body.s);
+  copyDyn(p.s1, body.s);
+  zeroRates(p.f0);
+  zeroRates(p.f1);
+  copyDyn(track.end, body.s);
 }
 
 /** Advance one marble on its own (a group of one, no holds). */
@@ -1264,14 +1435,15 @@ function slip2(ctx: Ctx, s: Dyn): number {
  * its threshold during the substep. A slip or speed growing from zero is not a stop.
  */
 function stopReached(ctx: Ctx, s0: Dyn, s1: Dyn, uStop: number, vStop: number): boolean {
-  if (ctx.fixed || ctx.slaved) return false;
+  if (ctx.slaved || (ctx.fixed && !ctx.restart)) return false;
   if (ctx.mode === 'slide') {
     const u1 = slip2(ctx, s1);
     return u1 < uStop * uStop && u1 < slip2(ctx, s0);
   }
   if (ctx.mode === 'roll') {
+    // Shrinking below vStop, or held there (a restart that something stops at once).
     const v1 = s1.vx * s1.vx + s1.vy * s1.vy + s1.vz * s1.vz;
-    return v1 < vStop * vStop && v1 < s0.vx * s0.vx + s0.vy * s0.vy + s0.vz * s0.vz;
+    return v1 < vStop * vStop && v1 <= s0.vx * s0.vx + s0.vy * s0.vy + s0.vz * s0.vz;
   }
   return false;
 }

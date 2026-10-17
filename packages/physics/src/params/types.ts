@@ -69,7 +69,7 @@ export interface SolverParams {
   readonly advanceIterations: number;
   /** Bisection/Newton iterations when refining a root (–). */
   readonly rootIterations: number;
-  /** Near a Coulomb stop a substep covers at most this fraction of the remaining slip (–). */
+  /** Near a Coulomb stop a substep uses at most this fraction of the remaining slip (–). */
   readonly stopRefine: number;
   /** On a curved support a substep turns the contact normal by at most this angle (rad). */
   readonly curveRefine: number;

@@ -6,10 +6,12 @@
   "description": "The deterministic simulation core shared by the app, the AI and the server.",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "goldens": "node scripts/update-goldens.ts"
   },
   "devDependencies": {
     "@kanche/testkit": "workspace:*"

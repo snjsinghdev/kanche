@@ -166,10 +166,15 @@ export function featureGap(
       if (hf === undefined) return setGap(out, z - r, 0, 0, 1, 1);
       const p = cellPatch(hf, x, y);
       const h = p.c0 + p.cx * x + p.cy * y + p.cxy * x * y;
-      // Impacts use the small-slope normal +z; the gap's gradient keeps the true slope.
-      setGap(out, z - r - h, 0, 0, 1, HEIGHTFIELD_LIP);
-      out.gx = -(p.cx + p.cxy * y);
-      out.gy = -(p.cy + p.cxy * x);
+      // The gap is vertical (z − R − h); its gradient (−∇h, 1) is also the surface normal, so an
+      // impact and the gap's rate agree about what "approaching" means on a slope.
+      const gx = -(p.cx + p.cxy * y);
+      const gy = -(p.cy + p.cxy * x);
+      const norm = Math.sqrt(1 + gx * gx + gy * gy);
+      setGap(out, z - r - h, gx / norm, gy / norm, 1 / norm, HEIGHTFIELD_LIP);
+      out.gx = gx;
+      out.gy = gy;
+      out.gz = 1;
       return out;
     }
     case 'rim': {

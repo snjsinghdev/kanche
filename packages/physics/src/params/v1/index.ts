@@ -76,7 +76,7 @@ export const PARAMS_V1: PhysicsParams = Object.freeze({
     impactMaxSteps: 4096, // –
     advanceIterations: 64, // –
     rootIterations: 64, // –
-    stopRefine: 0.125, // – (ADR-0006)
+    stopRefine: 0.03125, // – (ADR-0006: Coulomb stops on cross slopes)
     curveRefine: 0.004, // rad per substep on the rim, edges and corners (ADR-0006)
     maxSubsteps: 4096, // –
     eventsPerStep: 64, // –

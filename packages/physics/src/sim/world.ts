@@ -22,6 +22,7 @@ import { MOTION_CODE, type MarbleState } from '../state.ts';
 import {
   advanceGroup,
   holdNeedNow,
+  restTrack,
   locateCell,
   newTrack,
   PROBE,
@@ -55,6 +56,7 @@ import { copyDyn, newDyn, type Dyn } from './dyn.ts';
 import { extendBox } from './hermite.ts';
 import { newImpactOutput, resolveImpact, type ImpactSide } from './impact.ts';
 import { canHold, holdGeometry, newHoldGeo, type Hold, type HoldGeo } from './holds.ts';
+import { MAX_EXACT, solveLcp } from './lcp.ts';
 
 /** Bookkeeping events that change nothing visible get no keyframes. */
 const SILENT = new Set<number>([
@@ -69,69 +71,15 @@ const SILENT = new Set<number>([
 const trueA = newDyn();
 const trueB = newDyn();
 
+/** A contact event whose surfaces are further apart than this at commit is stale (m). */
+const CONTACT_SLACK = 1e-9;
+
 /** Contacts closer than this count as touching when contacts are relaxed after an impact (m). */
 const TOUCH = 1e-9;
 /** Gauss–Seidel sweeps when relaxing contacts after an impact (–). */
 const RELAX_SWEEPS = 64;
-/** Contact sets up to this size are solved exactly (2^n active sets) (–). */
-const MAX_EXACT = 6;
-/** A contact counts as non-closing below this fraction of its initial closing (–). */
-const CLOSING_TOL = 1e-12;
-
-/** Every subset of 0..n−1, smallest first, then in lexicographic order (deterministic). */
-function activeSets(n: number): number[][] {
-  const out: number[][] = [];
-  for (let mask = 1; mask < 1 << n; mask += 1) {
-    const set: number[] = [];
-    for (let i = 0; i < n; i += 1) if ((mask & (1 << i)) !== 0) set.push(i);
-    out.push(set);
-  }
-  return out.sort((x, y) => {
-    if (x.length !== y.length) return x.length - y.length;
-    for (let k = 0; k < x.length; k += 1) {
-      const d = defined(x[k], 'set') - defined(y[k], 'set');
-      if (d !== 0) return d;
-    }
-    return 0;
-  });
-}
-
-/** Solve A_SS·λ = c_S by Gaussian elimination with partial pivoting; null when singular. */
-function solveSubset(
-  a: readonly number[][],
-  c: readonly number[],
-  set: readonly number[],
-): number[] | null {
-  const m = set.length;
-  const rows = set.map((i) => [
-    ...set.map((j) => defined(defined(a[i], 'row')[j], 'a')),
-    defined(c[i], 'c'),
-  ]);
-  for (let col = 0; col < m; col += 1) {
-    let pivot = col;
-    for (let r = col + 1; r < m; r += 1) {
-      if (
-        Math.abs(defined(defined(rows[r], 'row')[col], 'a')) >
-        Math.abs(defined(defined(rows[pivot], 'row')[col], 'a'))
-      )
-        pivot = r;
-    }
-    const pr = defined(rows[pivot], 'row');
-    const p = defined(pr[col], 'a');
-    if (Math.abs(p) < 1e-300) return null;
-    rows[pivot] = defined(rows[col], 'row');
-    rows[col] = pr;
-    for (let r = 0; r < m; r += 1) {
-      if (r === col) continue;
-      const row = defined(rows[r], 'row');
-      const f = defined(row[col], 'a') / p;
-      if (f === 0) continue;
-      for (let k = col; k <= m; k += 1) row[k] = defined(row[k], 'a') - f * defined(pr[k], 'a');
-    }
-  }
-  return rows.map((row, i) => defined(row[m], 'b') / defined(row[i], 'a'));
-}
-
+/** Settle-and-stop passes when relaxing contacts after an impact (–). */
+const RELAX_PASSES = 4;
 /** Rank of an event kind for simultaneous events: impacts first, then internal events. */
 const RANK_PAIR = 0;
 const RANK_STATIC = 1;
@@ -182,6 +130,11 @@ export class Sim {
     this.bodies = bodies;
     this.tracks = bodies.map(() => newTrack());
     this.boxes = bodies.map(() => ({ xMin: 0, xMax: 0, yMin: 0, yMax: 0, zMin: 0, zMax: 0 }));
+    this.singletons = bodies.map((b, i) => ({
+      bodies: [b],
+      tracks: [defined(this.tracks[i], 'track')],
+      holds: [],
+    }));
     this.timelines = recordTimeline ? bodies.map((b) => ({ id: b.id, keyframes: [] })) : null;
     this.groundPair = {
       e: world.surface.e,
@@ -220,7 +173,10 @@ export class Sim {
         return;
       }
       metrics.steps += 1;
-      const movedThisStep = this.bodies.map((b) => !b.done && b.motion !== 'resting');
+      const movedThisStep = this.movedThisStep;
+      this.bodies.forEach((b, i) => {
+        movedThisStep[i] = !b.done && b.motion !== 'resting';
+      });
       let eventsInStep = 0;
       while (this.tau < dt) {
         const span = dt - this.tau;
@@ -228,11 +184,13 @@ export class Sim {
         if (next === null) {
           this.commitAll(span);
           this.tau = dt;
+          for (const b of this.bodies) this.tidySpin(b);
           break;
         }
         this.commitTo(next.t);
         this.tau = next.t >= span ? dt : this.tau + next.t;
         this.apply(next);
+        for (const b of this.bodies) this.tidySpin(b);
         this.checkPockets();
         eventsInStep += 1;
         if (this.events.length > solver.eventsPerShot) {
@@ -242,7 +200,8 @@ export class Sim {
         }
         if (eventsInStep > solver.eventsPerStep) {
           metrics.stepCapHits += 1;
-          this.stepCapFallback();
+          this.stepCapFallback(next);
+          eventsInStep = 0;
         }
       }
       this.checkPockets();
@@ -257,45 +216,53 @@ export class Sim {
 
   private findNext(span: number): Next | null {
     const { bodies, tracks, world } = this;
-    const found: { best: Next | null } = { best: null };
-    const consider = (n: Next): void => {
-      if (found.best === null || before(n, found.best)) found.best = n;
-    };
+    let best: Next | null = null;
     for (const group of this.groups()) {
+      const lone = group.bodies.length === 1 ? group.bodies[0] : undefined;
+      if (lone !== undefined && (lone.done || lone.motion === 'resting')) {
+        restTrack(lone, defined(group.tracks[0], 'track'), span);
+        continue;
+      }
       const ev = advanceGroup(world, group.bodies, group.tracks, group.holds, span);
       if (ev !== null) {
-        consider({
+        const n: Next = {
           t: ev.t,
           rank: RANK_INTERNAL + ev.code,
           a: defined(ev.body, 'event marble'),
           b: null,
           feature: null,
           internal: ev,
-        });
+        };
+        if (best === null || before(n, best)) best = n;
       }
     }
-    const limit = found.best === null ? span : found.best.t;
-    // Static features.
-    bodies.forEach((b, i) => {
+    const limit = best === null ? span : best.t;
+    // Static features, for the marbles that move.
+    for (let i = 0; i < bodies.length; i += 1) {
+      const b = defined(bodies[i], 'body');
       const track = defined(tracks[i], 'track');
-      if (b.done || !track.moving) return;
+      if (b.done || !track.moving) continue;
       const feats = this.featuresFor(b);
+      if (feats.length === 0) continue;
       const hit = staticContact(world, b, track, feats, limit, this.hit);
       if (hit.feature !== null && hit.t <= limit) {
-        consider({
+        const n: Next = {
           t: hit.t,
           rank: RANK_STATIC,
           a: b,
           b: null,
           feature: hit.feature,
           internal: null,
-        });
+        };
+        if (best === null || before(n, best)) best = n;
       }
-    });
+    }
     // Marble pairs, through a sort-and-sweep broadphase on the trial curves' boxes.
-    const order: number[] = [];
-    bodies.forEach((b, i) => {
-      if (b.done) return;
+    const order = this.order;
+    order.length = 0;
+    for (let i = 0; i < bodies.length; i += 1) {
+      const b = defined(bodies[i], 'body');
+      if (b.done) continue;
       const track = defined(tracks[i], 'track');
       const box = defined(this.boxes[i], 'box');
       box.xMin = Infinity;
@@ -316,38 +283,51 @@ export class Sim {
       box.zMin -= b.r;
       box.zMax += b.r;
       order.push(i);
-    });
-    order.sort((i, j) => {
-      const d = defined(this.boxes[i], 'box').xMin - defined(this.boxes[j], 'box').xMin;
-      return d !== 0 ? d : defined(bodies[i], 'body').id - defined(bodies[j], 'body').id;
-    });
-    order.forEach((i, oi) => {
+    }
+    order.sort(this.byBox);
+    for (let oi = 0; oi < order.length; oi += 1) {
+      const i = defined(order[oi], 'order');
       const bi = defined(this.boxes[i], 'box');
-      for (const j of order.slice(oi + 1)) {
+      const ta = defined(tracks[i], 'track');
+      for (let oj = oi + 1; oj < order.length; oj += 1) {
+        const j = defined(order[oj], 'order');
         const bj = defined(this.boxes[j], 'box');
         if (bj.xMin > bi.xMax) break;
         if (bj.yMin > bi.yMax || bi.yMin > bj.yMax || bj.zMin > bi.zMax || bi.zMin > bj.zMax) {
           continue;
         }
-        const ta = defined(tracks[i], 'track');
         const tb = defined(tracks[j], 'track');
         if (!ta.moving && !tb.moving) continue;
         const A = defined(bodies[i], 'body');
         const B = defined(bodies[j], 'body');
-        if (this.heldPair(A, B)) continue;
+        if (this.holds.length > 0 && this.heldPair(A, B)) continue;
         const t = pairContact(world, A, ta, B, tb, limit);
         if (t <= limit) {
-          const [lo, hi] = A.id < B.id ? [A, B] : [B, A];
-          consider({ t, rank: RANK_PAIR, a: lo, b: hi, feature: null, internal: null });
+          const lo = A.id < B.id ? A : B;
+          const hi = A.id < B.id ? B : A;
+          const n: Next = { t, rank: RANK_PAIR, a: lo, b: hi, feature: null, internal: null };
+          if (best === null || before(n, best)) best = n;
         }
       }
-    });
-    return found.best;
+    }
+    return best;
   }
+
+  private readonly order: number[] = [];
+  private readonly movedThisStep: boolean[] = [];
+  /** Every marble on its own: the groups whenever nothing is held. */
+  private readonly singletons: { bodies: Body[]; tracks: Track[]; holds: Hold[] }[];
+
+  /** Broadphase order: by the box's lower x, then by id. */
+  private readonly byBox = (i: number, j: number): number => {
+    const d = defined(this.boxes[i], 'box').xMin - defined(this.boxes[j], 'box').xMin;
+    return d !== 0 ? d : defined(this.bodies[i], 'body').id - defined(this.bodies[j], 'body').id;
+  };
 
   /** Marbles joined by holds advance together; every other marble is a group of its own. */
   private groups(): { bodies: Body[]; tracks: Track[]; holds: Hold[] }[] {
     const { bodies, tracks, holds } = this;
+    if (holds.length === 0) return this.singletons;
     const parent = bodies.map((_, i) => i);
     const root = (i: number): number => {
       let r = i;
@@ -387,27 +367,46 @@ export class Sim {
 
   /** The static features a marble can strike, given what supports and holds it. */
   private featuresFor(b: Body): readonly StaticFeature[] {
+    const base = this.supportFeatures(b.support);
+    if (this.holds.length === 0) return base;
     const held = this.holds.filter((h) => h.a === b && h.feature !== null).map((h) => h.feature);
-    const all =
-      held.length === 0
-        ? this.world.features
-        : this.world.features.filter((f) => !held.includes(f));
-    const sup = b.support;
+    return held.length === 0 ? base : base.filter((f) => !held.includes(f));
+  }
+
+  private readonly featureCache = new Map<string, readonly StaticFeature[]>();
+
+  /** The features a marble on this support could strike (cached per support). */
+  private supportFeatures(sup: Support | null): readonly StaticFeature[] {
+    const all = this.world.features;
     if (sup === null) return all;
+    const block =
+      sup.kind === 'edge'
+        ? sup.edge.block
+        : sup.kind === 'corner'
+          ? sup.corner.block
+          : sup.kind === 'top'
+            ? sup.block.index
+            : -1;
+    const key = `${sup.kind}:${String(block)}`;
+    const cached = this.featureCache.get(key);
+    if (cached !== undefined) return cached;
+    let list: readonly StaticFeature[];
     switch (sup.kind) {
       case 'base':
-        return all.filter(
+        list = all.filter(
           (f) => f.kind === 'wall' || f.kind === 'top' || f.kind === 'edge' || f.kind === 'corner',
         );
+        break;
       case 'top':
       case 'rim':
-        return all.filter((f) => f.kind === 'wall');
+        list = all.filter((f) => f.kind === 'wall');
+        break;
       case 'floor':
-        return all.filter((f) => f.kind === 'pit-wall');
+        list = all.filter((f) => f.kind === 'pit-wall');
+        break;
       case 'edge':
-      case 'corner': {
-        const block = sup.kind === 'edge' ? sup.edge.block : sup.corner.block;
-        return all.filter(
+      case 'corner':
+        list = all.filter(
           (f) =>
             f.kind === 'wall' ||
             f.kind === 'base' ||
@@ -418,8 +417,10 @@ export class Sim {
                   ? f.corner.block
                   : f.block.index) !== block),
         );
-      }
+        break;
     }
+    this.featureCache.set(key, list);
+    return list;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -434,6 +435,14 @@ export class Sim {
         throw new PhysicsError('internal', 'a trial event was skipped');
       }
     });
+  }
+
+  /** A marble left spinning with no spin (it ran out inside a span) is at rest. */
+  private tidySpin(b: Body): void {
+    if (b.motion === 'spinning' && b.s.wz === 0) {
+      b.motion = 'resting';
+      this.emit('spin-rest', b);
+    }
   }
 
   /** Re-integrate every marble from the step's split point to t. */
@@ -452,6 +461,13 @@ export class Sim {
   // Resolving events
 
   private apply(next: Next): void {
+    // A contact is resolved from the committed (re-integrated) states. The trial curves it was
+    // found on can be off by a hair where forces are not smooth (a held contact letting go), so
+    // a contact whose surfaces are in fact apart is not one; the search resumes from here.
+    if (next.internal === null && this.apart(next)) {
+      this.world.metrics.staleContacts += 1;
+      return;
+    }
     const quiet = next.internal !== null && SILENT.has(next.internal.code);
     if (!quiet) {
       this.keyframe(next.a);
@@ -518,11 +534,13 @@ export class Sim {
         return;
       case PROBE.holeEnter:
         b.support = RIM;
+        this.alongSupport(b);
         this.emit('hole-enter', b);
         return;
       case PROBE.topLeave: {
         const sup = expectKind(b.support, 'top', 'support');
         b.support = { kind: 'edge', edge: defined(sup.block.edges[ev.arg], 'edge') };
+        this.alongSupport(b);
         this.emit('support', b);
         return;
       }
@@ -540,6 +558,7 @@ export class Sim {
         const n = block.edges.length;
         const corner = defined(block.corners[ev.code === PROBE.edgeA ? k : (k + 1) % n], 'corner');
         b.support = { kind: 'corner', corner };
+        this.alongSupport(b);
         this.emit('support', b);
         return;
       }
@@ -558,6 +577,7 @@ export class Sim {
         const n = block.edges.length;
         const edge = defined(block.edges[ev.code === PROBE.corner1 ? (k + n - 1) % n : k], 'edge');
         b.support = { kind: 'edge', edge };
+        this.alongSupport(b);
         this.emit('support', b);
         return;
       }
@@ -583,13 +603,44 @@ export class Sim {
     }
   }
 
+  /** Whether the surfaces of a contact event are more than CONTACT_SLACK apart now. */
+  private apart(next: Next): boolean {
+    const a = next.a;
+    if (next.b !== null) {
+      const b = next.b;
+      const dx = a.s.x - b.s.x;
+      const dy = a.s.y - b.s.y;
+      const dz = a.s.z - b.s.z;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz) - a.r - b.r > CONTACT_SLACK;
+    }
+    const f = defined(next.feature, 'feature');
+    const g = featureGap(this.world.court, f, a.r, a.s.x, a.s.y, a.s.z, newGap());
+    return !g.valid || g.gap > CONTACT_SLACK;
+  }
+
+  /**
+   * At a hand-over between supports the velocity must lie in the new support's tangent plane:
+   * the constraint keeps v·n at zero only if it starts there, and the normal force does work on
+   * any v·n it inherits. The hand-over is smooth, so what is removed is rounding-sized; it is
+   * booked as impact loss.
+   */
+  private alongSupport(b: Body): void {
+    const sup = b.support;
+    if (sup === null) return;
+    const n = this.supportNormal(b, sup);
+    const vn = b.s.vx * n.x + b.s.vy * n.y + b.s.vz * n.z;
+    if (vn !== 0) this.removeNormal(b, n.x, n.y, n.z);
+  }
+
   /** On a plane the centre sits at ground level + r and the vertical velocity is not modelled. */
   private toPlane(b: Body): void {
     const s = b.s;
-    const before = kineticEnergy(b);
+    const g = this.world.params.g;
+    const before = kineticEnergy(b) + potentialEnergy(b, g);
     s.z = supportLevel(this.world, b, s.x, s.y) + b.r;
     s.vz = 0;
-    this.impactLoss += before - kineticEnergy(b);
+    // The snap is at most a rounding-sized move; its energy is booked so the ledger stays exact.
+    this.impactLoss += before - kineticEnergy(b) - potentialEnergy(b, g);
   }
 
   private impact(a: Body, other: Body | null, feature: StaticFeature | null): void {
@@ -673,7 +724,20 @@ export class Sim {
   }
 
   private hold(h: Hold): void {
-    if (holdNeedNow(this.world, h) > 0) this.holds.push(h);
+    // The component of held marbles the new hold joins, and its holds.
+    const bodies = new Set<Body>(h.b === null ? [h.a] : [h.a, h.b]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const x of this.holds) {
+        if (x.b === null || bodies.has(x.a) === bodies.has(x.b)) continue;
+        bodies.add(x.a);
+        bodies.add(x.b);
+        grew = true;
+      }
+    }
+    const list = [...bodies].sort((p, q) => p.id - q.id);
+    const holds = this.holds.filter((x) => bodies.has(x.a));
+    if (holdNeedNow(this.world, h, list, holds) > 0) this.holds.push(h);
   }
 
   /**
@@ -728,10 +792,19 @@ export class Sim {
         if (g.valid && g.gap <= TOUCH) constraints.push({ a: b, b: null, feature: f });
       }
     }
-    if (constraints.length === 0) return;
+    if (constraints.length === 0) {
+      for (const b of bodies) this.settle(b);
+      return;
+    }
     let before = 0;
     for (const b of bodies) before += kineticEnergy(b);
-    this.stopClosing(constraints, bodies);
+    // Settling can bring a marble to rest and leave its partner closing on it again, so settle
+    // and stop closing in turn until nothing closes (resting marbles count as fixed).
+    for (let pass = 0; pass < RELAX_PASSES; pass += 1) {
+      this.stopClosing(constraints, bodies);
+      for (const b of bodies) this.settleMotion(b, false);
+      if (!constraints.some((h) => this.closing(h) > 0)) break;
+    }
     let after = 0;
     for (const b of bodies) after += kineticEnergy(b);
     this.impactLoss += before - after;
@@ -781,15 +854,17 @@ export class Sim {
           defined(a[i], 'row')[j] = defined(c0[i], 'c0') - defined(c1[i], 'c1');
         }
       }
-      for (const set of activeSets(n)) {
-        const lambda = solveSubset(a, c0, set);
-        if (lambda === null || lambda.some((l) => l < 0)) continue;
-        lambda.forEach((l, k) => {
-          apply(defined(set[k], 'set'), l);
+      // w = −closing after = −c0 + A·λ ≥ 0.
+      const lambda = solveLcp(
+        a,
+        c0.map((c) => -c),
+        1e-15,
+      );
+      if (lambda !== null) {
+        lambda.forEach((l, i) => {
+          if (l > 0) apply(i, l);
         });
-        const c = closingAll();
-        if (c.every((x, i) => x <= CLOSING_TOL * (1 + Math.abs(defined(c0[i], 'c0'))))) return;
-        restore();
+        return;
       }
     }
     for (let sweep = 0; sweep < RELAX_SWEEPS; sweep += 1) {
@@ -838,7 +913,7 @@ export class Sim {
 
   /** How fast a marble's centre moves along n per unit impulse along n (1/kg). */
   private inverseMassAlong(b: Body, n: HoldGeo): number {
-    if (b.done || b.motion === 'resting') return 0;
+    if (b.done || b.motion === 'resting' || b.motion === 'spinning') return 0;
     const g = this.gradient(b);
     if (g === null) return 1 / b.m;
     // On a plane an impulse acts through its generalised part n_h + n_z·∇h (see holds.ts).
@@ -848,7 +923,7 @@ export class Sim {
   }
 
   private pushAlong(b: Body, j: number, n: HoldGeo): void {
-    if (b.done || b.motion === 'resting') return;
+    if (b.done || b.motion === 'resting' || b.motion === 'spinning') return;
     const g = this.gradient(b);
     if (g === null) {
       b.s.vx += (j * n.nx) / b.m;
@@ -1110,22 +1185,40 @@ export class Sim {
       az = g * n.z * n.z - g;
       limit = muR0 * g * Math.max(0, n.z);
     }
-    // A held contact takes the part of the push that drives the marble into it.
-    for (const h of this.holds) {
-      if (h.a !== b && h.b !== b) continue;
-      const geo = this.geometry(h, newHoldGeo());
-      const sign = h.a === b ? 1 : -1;
-      const nx = sign * geo.nx;
-      const ny = sign * geo.ny;
-      const nz = sign * geo.nz;
-      const into = ax * nx + ay * ny + az * nz;
-      if (into < 0) {
-        ax -= into * nx;
-        ay -= into * ny;
-        az -= into * nz;
+    // Whatever the marble touches (held or not) takes the part of the push that drives the
+    // marble into it: a marble pinned against a wall, an edge or another marble stays put.
+    const normals = this.touchingNormals(b);
+    for (let sweep = 0; sweep < 4; sweep += 1) {
+      for (const n of normals) {
+        const into = ax * n.x + ay * n.y + az * n.z;
+        if (into < 0) {
+          ax -= into * n.x;
+          ay -= into * n.y;
+          az -= into * n.z;
+        }
       }
     }
     return (5 / 7) * Math.sqrt(ax * ax + ay * ay + az * az) > limit;
+  }
+
+  /** Unit normals (pointing at b) of the walls, edges, corners and marbles b is touching. */
+  private touchingNormals(b: Body): { x: number; y: number; z: number }[] {
+    const out: { x: number; y: number; z: number }[] = [];
+    const fg = newGap();
+    for (const f of this.world.features) {
+      if (!canHold(f)) continue;
+      const g = featureGap(this.world.court, f, b.r, b.s.x, b.s.y, b.s.z, fg);
+      if (g.valid && g.gap <= TOUCH) out.push({ x: g.nx, y: g.ny, z: g.nz });
+    }
+    for (const o of this.bodies) {
+      if (o === b || o.done) continue;
+      const dx = b.s.x - o.s.x;
+      const dy = b.s.y - o.s.y;
+      const dz = b.s.z - o.s.z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d - b.r - o.r <= TOUCH) out.push({ x: dx / d, y: dy / d, z: dz / d });
+    }
+    return out;
   }
 
   private retire(b: Body, how: 'pocketed' | 'out'): void {
@@ -1184,9 +1277,25 @@ export class Sim {
     }
   }
 
-  /** Past the per-step event cap: stop every moving marble's relative motion inelastically. */
-  private stepCapFallback(): void {
-    this.forceRest();
+  /**
+   * Past the per-step event cap (a run of events that is not converging): the marbles of the
+   * last event are stopped where they are, their kinetic energy booked as forced. Everything
+   * else carries on.
+   */
+  private stepCapFallback(next: Next): void {
+    for (const b of next.b === null ? [next.a] : [next.a, next.b]) {
+      if (b.done) continue;
+      const before = kineticEnergy(b);
+      const s = b.s;
+      s.vx = 0;
+      s.vy = 0;
+      s.vz = 0;
+      s.wx = 0;
+      s.wy = 0;
+      s.wz = 0;
+      this.forced += before;
+      this.settle(b);
+    }
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1216,8 +1325,11 @@ export class Sim {
     });
   }
 
+  /** When the shot ended: its last event, or tMax if it had to be forced to rest (s). */
   duration(): number {
-    return this.now();
+    if (this.world.metrics.forcedRest) return this.now();
+    const last = this.events.at(-1);
+    return last === undefined ? 0 : last.t;
   }
 
   finalStates(): MarbleState[] {
@@ -1304,6 +1416,7 @@ export class Sim {
       forcedRest: m.forcedRest,
       cellCrossings: m.cellCrossings,
       tableCrossings: m.tableCrossings,
+      staleContacts: m.staleContacts,
     };
   }
 }

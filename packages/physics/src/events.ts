@@ -116,6 +116,8 @@ export interface ShotMetrics {
   readonly forcedRest: boolean;
   readonly cellCrossings: number;
   readonly tableCrossings: number;
+  /** Contacts found on the trial curves that the committed state showed apart (not resolved). */
+  readonly staleContacts: number;
 }
 
 export interface ShotResult {

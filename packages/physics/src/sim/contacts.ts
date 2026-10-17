@@ -48,6 +48,8 @@ export function pieceAt(track: Track, t: number): Piece {
 
 /** Approach rates slower than this at a touching contact are rounding (m/s). */
 const RATE_TOL = 1e-12;
+/** The largest time step a final Newton polish may take (s). */
+const NEWTON_LEAD = 1e-9;
 
 const pa = { x: 0, y: 0, z: 0 };
 const pb = { x: 0, y: 0, z: 0 };
@@ -153,17 +155,20 @@ function firstRoot(world: World, gap: Gap, tEnd: number): number {
       gap.eval(t);
       if (gap.g <= tol) {
         // Closing slower than RATE_TOL is rounding, not an approach (it would chatter forever).
-        if (gap.rate < -RATE_TOL) return gap.g <= 0 ? t : Math.min(tEnd, t - gap.g / gap.rate);
+        if (gap.rate < -RATE_TOL) {
+          // A Newton polish of the last ≤ tol of gap, unless the closing is so slow (a graze)
+          // that it would leap ahead: then the surfaces are touching now.
+          const lead = gap.g <= 0 ? 0 : -gap.g / gap.rate;
+          const hit = lead <= NEWTON_LEAD ? t + lead : t;
+          return hit <= tEnd ? hit : Infinity;
+        }
         break;
       }
       gap.boundFrom(t);
+      // No contact before `next`: past the end of the search, there is none to report.
       const next = gap.bound > 0 ? t + gap.g / gap.bound : Infinity;
-      if (next >= gap.until) {
-        if (gap.until >= tEnd) return Infinity;
-        t = gap.until;
-      } else {
-        t = next;
-      }
+      if (next >= tEnd) return Infinity;
+      t = next >= gap.until ? gap.until : next;
     }
     const resumed = escape(world, gap, t, tEnd);
     if (resumed.root) return resumed.t;

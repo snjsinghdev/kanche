@@ -210,7 +210,8 @@ export function respond(
   fy: number,
   fz: number,
 ): void {
-  if (!moving) return;
+  // A marble that only spins about the vertical is at rest as far as translation goes.
+  if (!moving || ctx.mode === 'spin') return;
   const sup = ctx.support;
   if (sup !== null && ctx.mode !== 'air' && !isCurved(sup)) {
     // On a plane the centre moves on z = h(x, y), so a force acts through its generalised force
@@ -273,7 +274,7 @@ export function responseAlong(
   ny: number,
   nz: number,
 ): number {
-  if (!moving) return 0;
+  if (!moving || ctx.mode === 'spin') return 0;
   const sup = ctx.support;
   if (sup === null || ctx.mode === 'air') return 1 / ctx.m;
   const k = ctx.mode === 'roll' ? 5 / 7 : 1;
