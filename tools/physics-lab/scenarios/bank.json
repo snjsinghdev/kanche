@@ -1,0 +1,44 @@
+{
+  "description": "A shooter banks off a wall into a target: a wall impact, a marble impact and two roll-outs.",
+  "court": {
+    "surface": "tile",
+    "bounds": {
+      "xMin": -1,
+      "xMax": 2,
+      "yMin": -1,
+      "yMax": 1
+    },
+    "walls": [
+      {
+        "x1": -1,
+        "y1": 0.5,
+        "x2": 2,
+        "y2": 0.5
+      }
+    ]
+  },
+  "marbles": [
+    {
+      "id": 1,
+      "size": "r95",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": 2,
+      "size": "r80",
+      "x": 0.9,
+      "y": 0.335
+    }
+  ],
+  "shot": {
+    "marbleId": 1,
+    "flick": {
+      "dirX": 700,
+      "dirY": 700,
+      "fingerSpeed": 600,
+      "spin": 150,
+      "side": -80
+    }
+  }
+}

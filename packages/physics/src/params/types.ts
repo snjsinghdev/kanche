@@ -1,7 +1,8 @@
 /**
  * The shape of a physics parameter set. One frozen set exists per physicsVersion (params/v1);
- * tests derive variants with `withParams` (drag off, a halved step, a frictionless contact), but
- * production code always passes the frozen set for the match's version.
+ * tests, the Physics Lab and the KPB fitters derive variants (drag off, a halved step, a fitted
+ * coefficient) with `deriveParams`, but production code always passes the frozen set for the
+ * match's version.
  */
 
 import type { Table } from './table.ts';

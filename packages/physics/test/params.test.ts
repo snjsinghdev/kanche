@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { makeTable, PARAMS_V1, PhysicsError, tableValue, validateParams } from '../src/index.ts';
+import {
+  deriveParams,
+  makeTable,
+  PARAMS_V1,
+  PhysicsError,
+  tableValue,
+  validateParams,
+} from '../src/index.ts';
 import type { PhysicsParams } from '../src/index.ts';
 import { segmentAt } from '../src/params/table.ts';
 import { assertFinite, assertIntInRange, defined } from '../src/errors.ts';
@@ -154,5 +161,44 @@ describe('error helpers', () => {
       defined(undefined, 'gone');
     }).toThrow(expect.objectContaining({ code: 'internal' }) as Error);
     expect(() => defined(null, 'gone')).toThrow(PhysicsError);
+  });
+});
+
+describe('deriveParams', () => {
+  it('applies overrides to a copy and leaves the base alone', () => {
+    const p = deriveParams(PARAMS_V1, {
+      dragCoefficient: 0,
+      dt: PARAMS_V1.dt / 2,
+      surfaces: { dirt: { muS: 0.5, muR: { x: [0, 1], y: [0.03, 0.04] }, e: 0.2 } },
+      glass: { mu: 0.05 },
+      flick: { fingerMass: 0.008 },
+    });
+    expect(p.dragCoefficient).toBe(0);
+    expect(p.dt).toBe(PARAMS_V1.dt / 2);
+    expect(p.surfaces.dirt.muS).toBe(0.5);
+    expect(tableValue(p.surfaces.dirt.muR, 0.5)).toBeCloseTo(0.035, 15);
+    expect(tableValue(p.surfaces.dirt.e, 3)).toBe(0.2);
+    expect(p.surfaces.cement).toBe(PARAMS_V1.surfaces.cement);
+    expect(tableValue(p.glass.mu, 1)).toBe(0.05);
+    expect(p.glass.e).toBe(PARAMS_V1.glass.e);
+    expect(p.flick.fingerMass).toBe(0.008);
+    expect(p.flick.fingerRestitution).toBe(PARAMS_V1.flick.fingerRestitution);
+    expect(PARAMS_V1.dragCoefficient).toBe(0.5);
+    expect(deriveParams(PARAMS_V1, {})).toEqual(PARAMS_V1);
+  });
+
+  it.each([
+    ['an unknown key', { muS: 0.3 }],
+    ['an unknown surface', { surfaces: { ice: { muS: 0.1 } } }],
+    ['an unknown surface key', { surfaces: { tile: { mus: 0.1 } } }],
+    ['an unknown pair key', { wall: { restitution: 0.5 } }],
+    ['an unknown flick key', { flick: { mass: 0.1 } }],
+    ['a string for a number', { dt: '0.004' }],
+    ['a table without breakpoints', { edge: { e: { x: [0] } } }],
+    ['a value out of range', { surfaces: { sand: { muS: 3 } } }],
+    ['a table value out of range', { glass: { e: 1.5 } }],
+    ['a non-object', { surfaces: 3 }],
+  ])('rejects %s with a typed error', (_, overrides) => {
+    expect(() => deriveParams(PARAMS_V1, overrides as never)).toThrow(PhysicsError);
   });
 });

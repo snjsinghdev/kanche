@@ -14,6 +14,13 @@ export {
 } from './params/types.ts';
 export { validateParams } from './params/validate.ts';
 export {
+  deriveParams,
+  type PairOverrides,
+  type ParamOverrides,
+  type SurfaceOverrides,
+  type TableSpec,
+} from './params/derive.ts';
+export {
   buildCourt,
   MAX_BLOCK_HEIGHT,
   MAX_SLOPE,

@@ -1,0 +1,17 @@
+{
+  "name": "@kanche/physics-lab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Physics Lab CLI: runs a scenario and writes its event log, energy ledger and a CSV of |v|, |u| and ω over time.",
+  "scripts": {
+    "lab": "node src/cli.ts",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kanche/physics": "workspace:*"
+  },
+  "devDependencies": {
+    "@kanche/testkit": "workspace:*"
+  }
+}
