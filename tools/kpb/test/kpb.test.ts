@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { deriveParams, PARAMS_V1, tableValue, type PhysicsParams } from '@kanche/physics';
 
 import { formatDataset } from '../src/cli.ts';
-import { calibrate, fitFlick, t3, type Estimate } from '../src/fit.ts';
+import { calibrate, fitFlick, fitRim, t3, type Estimate } from '../src/fit.ts';
 import { DatasetError } from '../src/dataset.ts';
 import { scoreDataset } from '../src/score.ts';
 import { makeSynthetic, SYNTHETIC_TRUTH } from '../src/synthetic.ts';
@@ -86,7 +86,30 @@ describe('the flick fit', () => {
       (r) => r.kind === 'flick' && r.marbles.find((m) => m.id === r.shooter)?.size === 'r80',
     );
     expect(() => fitFlick({ ...d, recordings: r80 }, truth)).toThrow(DatasetError);
-    expect(() => fitFlick({ ...d, recordings: r80.slice(0, 2) }, truth)).toThrow(DatasetError);
+  });
+
+  it('refuses fewer than three flicks, even of two sizes', () => {
+    const d = starter();
+    const flicks = d.recordings.filter((r) => r.kind === 'flick');
+    const sizeOf = (r: (typeof flicks)[number]) => r.marbles.find((m) => m.id === r.shooter)?.size;
+    const a = flicks.find((r) => sizeOf(r) === 'r80');
+    const b = flicks.find((r) => sizeOf(r) === 'r110');
+    if (a === undefined || b === undefined) throw new Error('the starter set has both sizes');
+    expect(() => fitFlick({ ...d, recordings: [a, b] }, truth)).toThrow(/at least three/);
+  });
+});
+
+describe('the rim fit', () => {
+  it('refuses fewer than two hole shots that reach the rim', () => {
+    const d = starter();
+    const holes = d.recordings.filter((r) => r.kind === 'hole');
+    expect(() => fitRim({ ...d, recordings: holes.slice(0, 1) }, truth)).toThrow(/got 1/);
+    // Approaches filmed only for their first frames never reach the rim, so they don't count.
+    const short = holes.map((r) => ({
+      ...r,
+      tracks: r.tracks.map((t) => ({ ...t, x: t.x.slice(0, 3), y: t.y.slice(0, 3) })),
+    }));
+    expect(() => fitRim({ ...d, recordings: short }, truth)).toThrow(/got 0/);
   });
 });
 

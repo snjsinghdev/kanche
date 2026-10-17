@@ -75,6 +75,10 @@ describe('the KPB CLI', () => {
       run(['--kind', 'roll', '--surface', 'tile', '--launch', 'rolling', '--unit', 'ft']),
     ).toThrow(/--unit/);
     expect(() => main(['import', '--dataset'])).toThrow(/needs a value/);
+    // An empty id would read as marble 0, and an empty file name would fail only when read.
+    const roll = ['--kind', 'roll', '--surface', 'tile', '--launch', 'rolling'];
+    expect(() => main([...base, ...roll, '--shooter', ':r80:a.csv'])).toThrow(/a marble is/);
+    expect(() => main([...base, ...roll, '--shooter', '1:r80:'])).toThrow(/a marble is/);
     expect(() =>
       main([
         ...base,

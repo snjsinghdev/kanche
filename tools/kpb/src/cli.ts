@@ -92,12 +92,14 @@ interface MarbleSpec {
 }
 
 function marbleSpec(spec: string): MarbleSpec {
-  const [id, size, ...file] = spec.split(':');
-  const n = Number(id);
-  if (!Number.isInteger(n) || n < 0 || file.length === 0) {
+  const [id, size, ...rest] = spec.split(':');
+  // An empty id would read as marble 0 (Number('') is 0).
+  const n = id === undefined || id.trim() === '' ? NaN : Number(id);
+  const file = rest.join(':');
+  if (!Number.isInteger(n) || n < 0 || file === '') {
     throw new Error(`a marble is <id>:<size>:<tracker.csv>, got "${spec}"`);
   }
-  return { id: n, size: choice('a marble size', size ?? '', SIZE_CLASSES), file: file.join(':') };
+  return { id: n, size: choice('a marble size', size ?? '', SIZE_CLASSES), file };
 }
 
 function marble(spec: MarbleSpec, unit: LengthUnit): TrackedMarble {

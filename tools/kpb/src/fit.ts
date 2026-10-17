@@ -333,10 +333,16 @@ function reachesHole(rec: Recording): number {
  * 5. The rim model, from hole approaches: the edge pair's restitution and friction, which govern
  * a marble striking the rim. Residuals are the marble's positions from its launch until
  * RIM_WINDOW after it reaches the hole; each recording fits its launch. Recordings that never
- * reach the hole carry no information about the rim and are left out.
+ * reach the hole carry no information about the rim and are left out; at least two must remain.
  */
 export function fitRim(d: Dataset, base: PhysicsParams): Calibration {
   const recs = of(d, 'hole').filter((r) => Number.isFinite(reachesHole(r)));
+  // The error bars are cluster-robust over recordings, which takes at least two.
+  if (recs.length < 2) {
+    throw new DatasetError(
+      `fitRim needs at least two hole shots that reach the rim, got ${String(recs.length)}`,
+    );
+  }
   const paramsFor = (shared: readonly number[]): PhysicsParams =>
     deriveParams(base, { edge: { e: Math.min(1, shared[0] ?? NaN), mu: shared[1] ?? NaN } });
   const blocks: Block[] = recs.map((rec) => {
