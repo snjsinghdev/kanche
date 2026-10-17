@@ -161,7 +161,7 @@ export default tseslint.config(
 
   // Tools and tests run on Node.
   {
-    files: ['tools/**', '**/test/**', '**/e2e/**', '**/*.config.ts'],
+    files: ['tools/**', '**/test/**', '**/e2e/**', '**/scripts/**', '**/*.config.ts'],
     languageOptions: { globals: globals.node },
   },
 
