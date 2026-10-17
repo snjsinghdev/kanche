@@ -138,3 +138,12 @@ pnpm verify                      exit 0  218 s
 pnpm e2e                         exit 0   37 s  (27 passed)
 pnpm harness                     exit 0   53 s  (PASS: all 5 engines agree, 0e4d48c50528e812/727cc953980357c6/67369b3e26944067)
 ```
+
+And again after the retrofit, of `490ecd6`:
+
+```text
+pnpm install --frozen-lockfile   exit 0    1 s (from the local pnpm store)
+pnpm verify                      exit 0  217 s
+pnpm e2e                         exit 0   30 s  (28 passed, 2 skipped: the footage test runs in Chromium only)
+pnpm harness                     exit 0   35 s  (PASS: all 5 engines agree, 0e4d48c50528e812/727cc953980357c6/67369b3e26944067)
+```
