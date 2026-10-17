@@ -46,6 +46,12 @@ The owner asked why PR #2 was opened with Gate 6 failed. It shouldn't have been:
   - the lab's Play test checks that time advances;
   - the lab CLI's test reads only scenario files;
   - the synthetic dataset's reproducibility note is corrected: its launches use `Math.cos` and `Math.sin`.
+- **CodeRabbit's review of the retrofit itself** raised six more, all fixed:
+  - the lab refuses a frame with an empty field, and keeps video time non-negative in an unbounded stream;
+  - `kpb import` refuses a marble spec with an empty id or file name;
+  - `fitRim` refuses fewer than two hole shots that reach the rim;
+  - the flick test isolates its three-shot rule;
+  - a recording's court is checked as the simulation builds it, so bad geometry fails at validation, not in a fit.
 - **Cracks and spin friction on curved supports are proposed cuts, not settled ones.** The prompt names cracks, so leaving them out is the owner's call (`docs/gates.md`, Gate 5, change 5).
 
 None of this changes an outcome: the goldens, the harness hashes and the break's hash are the same.
