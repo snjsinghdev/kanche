@@ -4,11 +4,20 @@ import { compareRuns, formatTable, type EngineRun } from '../src/compare.ts';
 import { DEFAULT_SEEDS, seedsFromEnv } from '../src/config.ts';
 import { runHarness } from '../src/entry.ts';
 
-function ok(engine: string, combined: string): EngineRun {
+function ok(engine: string, combined: string, goldenMismatches: number[] = []): EngineRun {
   return {
     engine,
     version: '1',
-    result: { physicsVersion: 1, seeds: 1, steps: 1, combined, sample: [] },
+    result: {
+      physicsVersion: 1,
+      seeds: 1,
+      steps: 1,
+      combined,
+      goldenCombined: 'g',
+      goldenMismatches,
+      shotsCombined: 's',
+      sample: [],
+    },
     ms: 1,
   };
 }
@@ -17,10 +26,17 @@ describe('compareRuns', () => {
   it('passes when every engine agrees', () => {
     expect(compareRuns([ok('node', 'aa'), ok('deno', 'aa'), ok('webkit', 'aa')])).toEqual({
       ok: true,
-      reference: 'aa',
+      reference: 'aa/g/s',
       mismatched: [],
       failed: [],
     });
+  });
+
+  it('fails when an engine drifts from the committed goldens, even if all agree', () => {
+    const v = compareRuns([ok('node', 'aa', [3]), ok('deno', 'aa', [3])]);
+    expect(v.ok).toBe(false);
+    expect(v.mismatched).toEqual(['node', 'deno']);
+    expect(formatTable([ok('node', 'aa', [3])])).toContain('1 goldens differ');
   });
 
   it('fails on any mismatch and names the engine', () => {
@@ -53,13 +69,15 @@ describe('compareRuns', () => {
 });
 
 describe('runHarness', () => {
-  it('is reproducible in-process and reports its inputs', () => {
+  it('is reproducible in-process, reports its inputs and matches the committed goldens', () => {
     const a = runHarness(5, 10);
     expect(runHarness(5, 10)).toEqual(a);
-    expect(a).toMatchObject({ physicsVersion: 1, seeds: 5, steps: 10 });
+    expect(a).toMatchObject({ physicsVersion: 1, seeds: 5, steps: 10, goldenMismatches: [] });
     expect(a.sample).toHaveLength(4);
     expect(a.combined).toMatch(/^[0-9a-f]{16}$/);
-  });
+    expect(a.goldenCombined).toMatch(/^[0-9a-f]{16}$/);
+    expect(a.shotsCombined).toMatch(/^[0-9a-f]{16}$/);
+  }, 120_000);
 });
 
 describe('seedsFromEnv', () => {
