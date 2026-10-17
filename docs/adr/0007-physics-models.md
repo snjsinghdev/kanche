@@ -56,11 +56,11 @@ Chosen option: **the models below**.
 
 The hole's rim torus, block edges (radius-0 tubes) and block corners (points) are exact constraints. The normal force comes from the constraint, take-off happens when it reaches zero, and Coulomb sliding or rolling friction acts on them. Marbles hit, pivot over and hop edges.
 
-**Proposed cuts, awaiting the owner's confirmation** (`docs/gates.md`, Gate 5, change 5):
+**Cut from v1** (`docs/gates.md`, Gate 5, change 5, which records the owner's decision of 2026-10-18):
 
 - **Blocks are raised only** (0 < height < 8 mm). Cracks, which are lowered blocks, are not implemented, although the Phase 1 prompt names them.
   - A crack is the first feature that isn't convex. It needs a lowered-floor support region with entry and exit probes across its edges, strikes between its floor and its edges, and rest across a narrow crack, held by the far edge.
-  - It is deferred until the owner decides, and until Phase 2's courts show whether any needs one.
+  - They can come in a later `physicsVersion` if Phase 2's courts call for them; v1 stays runnable.
 - **Spin friction about the contact normal** acts on planes only, not on curved supports.
 
 ### The hole
@@ -120,7 +120,7 @@ Drag is quadratic, F = −½·ρ·Cd·A·|v|·v, with Cd = 0.5 as a PLACEHOLDER.
 
 - Good, because every model above has a test that fails when its law is broken, and impacts never add energy (KPB 9 over 1,000 shots per PR and 10,000 nightly).
 - Good, because the reference comparison found a real defect in the reference itself rather than hiding it, and the tools can fit and score real footage as soon as it exists.
-- Bad, because impacts and supports on steep slopes (the small-slope model) are a v1 simplification, and cracks and spin friction on curved supports are proposed cuts the owner has not yet confirmed. All three are listed as open in the handoff.
+- Bad, because impacts and supports on steep slopes (the small-slope model) are a v1 simplification, and cracks and spin friction on curved supports are cut from v1 (`docs/gates.md`, Gate 5). All three are listed in the handoff.
 - Bad, because KPB 14 and 15 stay open. KPB 14 has the two findings above; KPB 15 has no footage. Every coefficient is still a PLACEHOLDER.
 
 ### Confirmation

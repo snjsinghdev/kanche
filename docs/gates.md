@@ -57,6 +57,7 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
 | The break on a phone     | ❌ **29.6 ms median** (24.3 fastest, 31.2 p90, 100 runs) on the owner's OnePlus CPH2467: Snapdragon 695, Android 15, Chrome 155. That is a **mid-range** phone, so a budget phone will be slower. Its hash matches Node's |
 | The break on CI hardware | 25.0 ms median on an i7-5600U, against KPB 16's 5 ms. CI's own number is in the `kpb16` artifact of each run                                                                                                              |
 | Verdict                  | **FAILED.** By the gate rule, Phase 2 waits until the break is fast enough on the reference phone, or the scope is cut. `handoff/phase-01.md` sets out the options for the owner                                          |
+| Owner's decision         | 2026-10-18: optimise further (the handoff's option 1, which was recommended). The owner has no reference budget phone yet, so the gate can't be measured on one and stays open until it is                                |
 
 **Gate 5, scope: log planned versus actual time and every design change; if this phase ran more than 50% over plan, log the matching cut.**
 
@@ -68,14 +69,15 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
   2. **Held contacts use an exact LCP** with relaxation after impacts. The plan said a single frictionless constraint force (ADR-0006).
   3. **Substeps are refined** near Coulomb stops and on curved supports, inside the fixed step (ADR-0006).
   4. **KPB 6 checks tan θ**, under the review's own small-slope model (ADR-0007).
-  5. **Proposed cuts from v1, awaiting the owner's confirmation:** cracks (lowered blocks), and spin friction on curved supports (ADR-0007).
-     - The Phase 1 prompt names cracks ("steps, curbs and cracks lower than R"), so leaving them out is a scope cut, not a simplification. It stands only if the owner agrees.
+  5. **Cut from v1:** cracks (lowered blocks), and spin friction on curved supports (ADR-0007).
+     - The Phase 1 prompt names cracks ("steps, curbs and cracks lower than R"), so leaving them out is a scope cut, not a simplification. It was first logged as settled without asking the owner, then put to the owner as a proposal.
+     - **The owner's decision (2026-10-18):** the recommendation was to leave both out of v1 and add cracks in a later `physicsVersion` if Phase 2's courts call for them. The owner replied "go ahead as per recommendations".
      - **What building cracks takes.** A crack is the first court feature that isn't convex.
        - It needs a new support region (the lowered floor), and probes for entering and leaving it across an edge.
        - From the floor, the crack's edges must be strikeable, and from an edge, its floor and other edges.
        - A marble lodged across a narrow crack rests on one edge while held by the other: two edge contacts at once, which no court has exercised yet and which needs its own tests.
        - It also adds feature checks to the per-step path that Gate 6 is waiting on.
-     - **Why it is deferred, not built in the retrofit:** no court needs a crack until Phase 2's courts are designed, and the performance work comes first.
+     - **Why it was recommended:** no court needs a crack until Phase 2's courts are designed, the performance work for Gate 6 comes first, and v1 stays runnable when a later version adds them.
   6. **pooltool is vendored,** the plan's fallback, because it needs a development panda3d on Linux (ADR-0007).
   7. **e(v) and μBB are fitted jointly,** not one after the other, because each biases the other (ADR-0007).
   8. **KPB 16's wall time is measured outside the test runner.** Coverage instrumentation slows the shot twelvefold, so the timing runs in `scripts/bench.ts`, with a regression ceiling in CI. The suite holds the deterministic substep count (ADR-0006).

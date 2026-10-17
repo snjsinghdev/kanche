@@ -41,7 +41,7 @@ On flat ground with no drag, û never turns. The slide ends at t* = 2·|u0|/(7·
 
 With no drag, a roll from v stops after v²/(2·μR·g). With drag, it stops after (1/(2k))·ln(1 + k·v²/(μR·g)), where k = (5/7)·k_d (KPB 2). A rolling marble's kinetic energy is (7/10)·m·|v|², so rolling resistance dissipates (7/5)·m·μR·g·|v|.
 
-**Spin about the vertical** (ω_z) decays at (5/2)·μSp·g/R, on planes only. Spin friction on curved supports is a proposed cut, awaiting the owner (`gates.md`, Gate 5). A marble that has stopped translating but still spins is `spinning`.
+**Spin about the vertical** (ω_z) decays at (5/2)·μSp·g/R, on planes only. Spin friction on curved supports is cut from v1 (`gates.md`, Gate 5). A marble that has stopped translating but still spins is `spinning`.
 
 **Rest.** A marble at rest starts rolling again only if the push beats rolling resistance at rest: (5/7)·|a_t| > μR(0)·N/m. Any part of the push that drives it into a wall, an edge or another marble it is touching doesn't count.
 
@@ -135,7 +135,7 @@ A block is a raised convex polygon, 0 < height < 8 mm, with flat ground around i
 
 - Its top is a plane, its top edges are tubes, and its top corners are points. Marbles hit them, pivot over them and hop them.
 - Its vertical faces are lower than any marble's centre, so they are never touched.
-- Cracks (lowered blocks) are not modelled. The Phase 1 prompt names them, so this is a proposed cut, awaiting the owner (`gates.md`, Gate 5).
+- Cracks (lowered blocks) are not modelled. The Phase 1 prompt names them; they are cut from v1 and can come in a later physics version (`gates.md`, Gate 5).
 
 ## The flick
 

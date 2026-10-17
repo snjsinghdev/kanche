@@ -52,7 +52,7 @@ The owner asked why PR #2 was opened with Gate 6 failed. It shouldn't have been:
   - `fitRim` refuses fewer than two hole shots that reach the rim;
   - the flick test isolates its three-shot rule;
   - a recording's court is checked as the simulation builds it, so bad geometry fails at validation, not in a fit.
-- **Cracks and spin friction on curved supports are proposed cuts, not settled ones.** The prompt names cracks, so leaving them out is the owner's call (`docs/gates.md`, Gate 5, change 5).
+- **Cracks and spin friction on curved supports are cut from v1.** The prompt names cracks, so the cut was put to the owner; the decision is recorded in `docs/gates.md` (Gate 5, change 5).
 
 None of this changes an outcome: the goldens, the harness hashes and the break's hash are the same.
 
@@ -148,7 +148,7 @@ These are also logged under Gate 5 in `docs/gates.md`:
 - **Held contacts use an exact LCP.**
 - **Substeps are refined** near stops and on curved supports.
 - **KPB 6 checks tan θ,** under the small-slope model.
-- **Two proposed cuts, awaiting the owner:** cracks and spin friction on curved supports are not modelled.
+- **Two cuts from v1:** cracks and spin friction on curved supports are not modelled (`docs/gates.md`, Gate 5, change 5).
 - **pooltool is vendored,** not installed.
 - **e(v) and μBB are fitted jointly.**
 - **KPB 16's wall time is measured in an uninstrumented bench,** with a CI ceiling. The suite holds the substep count.
@@ -161,7 +161,7 @@ These are also logged under Gate 5 in `docs/gates.md`:
 
 ## Open issues
 
-1. **Gate 6 and KPB 16** (above): the owner's decision, before Phase 2.
+1. **Gate 6 and KPB 16** (above). On 2026-10-18 the owner chose to optimise further (option 1). There is no reference budget phone yet, so Gate 6 stays open until one is chosen and measured.
 2. **KPB 14:**
    - Report pooltool's ball–table slip sign error upstream (github.com/ekiefl/pooltool). That is an outward action for the owner.
    - Decide whether head-on returns should follow Mathavan (no vertical velocity) or Kanche's model. Kanche's is the more physical, so the reference would need a documented exception.
@@ -169,8 +169,8 @@ These are also logged under Gate 5 in `docs/gates.md`:
    - Choose 5 or 10 repeats per condition first. With 5, a metric the launch doesn't drive fails a perfect simulation about 5% of the time by chance (`docs/kpb.md`).
    - Write that decision into `docs/gates.md` before scoring (Gate 9).
 4. **Every coefficient is a PLACEHOLDER** until it is fitted. Fitted values ship as `physicsVersion` 2.
-5. **Proposed cuts, for the owner to confirm or reject:**
-   - **cracks** (lowered blocks), which the prompt names. Building them needs a lowered-floor support region with entry and exit probes, strikes between the floor and the edges, and tests for a marble lodged across a narrow crack (`docs/gates.md`, Gate 5, change 5);
+5. **Cut from v1** (`docs/gates.md`, Gate 5, change 5), for a later physics version if the courts call for them:
+   - **cracks** (lowered blocks), which the prompt names. Adding them needs a lowered-floor support region with entry and exit probes, strikes between the floor and the edges, and tests for a marble lodged across a narrow crack;
    - spin friction on curved supports.
 6. **v1 simplifications:**
    - the small-slope model for supports and impacts on slopes;
