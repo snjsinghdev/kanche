@@ -95,7 +95,9 @@ export function frame(timelines: readonly MarbleTimeline[], margin = 0.05): Boun
  * opposite corners. The frame is drawn upright, so the camera must be square to the court's axes.
  */
 export function parseRect(text: string): Bounds {
-  const v = text.split(',').map((p) => Number(p.trim()));
+  const fields = text.split(',').map((p) => p.trim());
+  // An empty field would read as 0 (Number('') is 0), placing the frame somewhere unintended.
+  const v = fields.map((p) => (p === '' ? NaN : Number(p)));
   const [x0, y0, x1, y1] = v;
   if (
     v.length !== 4 ||
@@ -119,5 +121,8 @@ export function parseRect(text: string): Bounds {
 
 /** The video time that shows shot time t, kept inside the clip (s). */
 export function videoTime(t: number, offset: number, duration: number): number {
-  return Math.min(Math.max(t + offset, 0), Number.isFinite(duration) ? duration : t + offset);
+  const v = Math.max(t + offset, 0);
+  // A stream's duration can be unbounded (Infinity) or not yet known (NaN): then only the start
+  // bounds the time.
+  return Number.isFinite(duration) ? Math.min(v, duration) : v;
 }

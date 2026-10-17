@@ -61,7 +61,7 @@ describe('the footage overlay', () => {
     expect(parseRect('1,1,0,0')).toEqual({ xMin: 0, xMax: 1, yMin: 0, yMax: 1 });
   });
 
-  it.each(['1,2,3', '1,2,3,4,5', '0,0,0,1', 'a,b,c,d', '0,0,Infinity,1'])(
+  it.each(['1,2,3', '1,2,3,4,5', '0,0,0,1', 'a,b,c,d', '0,0,Infinity,1', ',0,1,1', '0, ,1,1'])(
     'refuses "%s"',
     (text) => {
       expect(() => parseRect(text)).toThrow();
@@ -73,5 +73,8 @@ describe('the footage overlay', () => {
     expect(videoTime(0.5, -2, 10)).toBe(0);
     expect(videoTime(9.5, 1, 10)).toBe(10);
     expect(videoTime(3, 0, NaN)).toBe(3);
+    // A negative offset never maps to a negative time, even in an unbounded stream.
+    expect(videoTime(0, -2, Infinity)).toBe(0);
+    expect(videoTime(5, -2, Infinity)).toBe(3);
   });
 });
