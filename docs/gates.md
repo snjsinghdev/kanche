@@ -59,6 +59,26 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
 | Verdict                  | **FAILED.** By the gate rule, Phase 2 waits until the break is fast enough on the reference phone, or the scope is cut. `handoff/phase-01.md` sets out the options for the owner                                          |
 | Owner's decision         | 2026-10-18: optimise further (the handoff's option 1, which was recommended). The owner has no reference budget phone yet, so the gate can't be measured on one and stays open until it is                                |
 
+**A proxy target while there is no reference phone** (written 2026-10-18, before the optimisation). It steers the work; it is not the gate, which is still decided on the reference phone.
+
+- **How it is derived:** the 20 ms is scaled to the machines at hand by single-core Geekbench 6 scores. These are third-party aggregates, approximate, and only a proxy for JavaScript speed:
+
+  | SoC            | Phone                            | Geekbench 6 single-core |
+  | -------------- | -------------------------------- | ----------------------- |
+  | Snapdragon 695 | The owner's OnePlus CPH2467      | about 905 (894–908)     |
+  | Unisoc T606    | Moto G04 (ADR-0002's candidates) | about 372 (365–378)     |
+  | Unisoc T612    | realme C61                       | about 421               |
+  | Helio G85      | Galaxy F05                       | about 420               |
+  | Unisoc T7250   | POCO C71                         | 429–441                 |
+
+  Sources: [NanoReview](https://nanoreview.net/en/soc-compare/unisoc-t606-vs-qualcomm-snapdragon-695), [TopCPU](https://www.topcpu.net/en/soc-r/geekbench-6-single-core), [CPU-Monkey](https://www.cpu-monkey.com/en/compare_cpu-qualcomm_snapdragon_695_5g-vs-unisoc_t606), [Notebookcheck](https://www.notebookcheck.net/Unisoc-T7250-T615-Processor-Benchmarks-and-Specs.929759.0.html), [91mobiles](https://www.91mobiles.com/processor/unisoc-t7250-pdp).
+
+- **The slowest candidate, the T606, is about 2.4× slower** than the Snapdragon 695 (2.37–2.49 across the ranges).
+- **The proxy targets** are the break's median:
+  - on the OnePlus, 20 ms ÷ 2.4 ≈ **8.2 ms**;
+  - on the i7-5600U laptop, 8.2 × 25.0 / 29.6 (the measured laptop-to-phone ratio) ≈ **6.9 ms**.
+- **Today** the break takes 29.6 ms and 25.0 ms, so about 3.6× is needed. With a faster candidate (about 420–440), the OnePlus target would be about 9.5 ms.
+
 **Gate 5, scope: log planned versus actual time and every design change; if this phase ran more than 50% over plan, log the matching cut.**
 
 - **Planned:** no duration was set (see Phase 0, Gate 5).
