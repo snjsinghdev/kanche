@@ -6,7 +6,9 @@
   "description": "Shared test infrastructure: the Vitest preset and helpers. Imports no other @kanche package, so every package can use it.",
   "exports": {
     ".": "./src/index.ts",
-    "./vitest": "./src/vitest-preset.ts"
+    "./vitest": "./src/vitest-preset.ts",
+    "./golden/*": "./golden/*",
+    "./kpb/*": "./kpb/*"
   },
   "scripts": {
     "test": "vitest run --coverage"

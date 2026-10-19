@@ -1,0 +1,9 @@
+{
+  "description": "A marble rolled at the hole slightly off centre: over the rim and into the pit, or a lip-out.",
+  "court": {
+    "surface": "dirt",
+    "bounds": { "xMin": -1, "xMax": 1.5, "yMin": -1, "yMax": 1 },
+    "hole": { "x": 0.6, "y": 0, "radius": 0.03, "depth": 0.02, "rimRadius": 0.004 }
+  },
+  "marbles": [{ "id": 1, "size": "r80", "x": 0, "y": 0.012, "vx": 1.1, "wy": 137.5 }]
+}

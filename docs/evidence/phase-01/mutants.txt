@@ -1,0 +1,6 @@
+M1 sliding spin-up uses 3/2 instead of 5/2 (wrong inertia): exit 1; failing suites: KPB 1, KPB 3, KPB 5; failed tests: 10
+M2 rolling uses 2/3 instead of 5/7: exit 1; failing suites: KPB 2, KPB 6; failed tests: 6
+M3 drag pushes forward while rolling: exit 1; failing suites: KPB 2; failed tests: 3
+M4 restitution work uses e instead of e²: exit 1; failing suites: KPB 3, KPB 8; failed tests: 3
+M5 contact distance ignores the second radius: exit 1; failing suites: KPB 8; failed tests: 1
+M6 rolling resistance doubled: exit 1; failing suites: KPB 2, KPB 6; failed tests: 9

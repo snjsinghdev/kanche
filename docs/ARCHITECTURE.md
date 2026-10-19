@@ -42,15 +42,15 @@ The arrows mean "imports". The app sends only shot inputs, and the server re-sim
 
 ### Shared core (`packages/`)
 
-| Package      | May import         | Determinism lint   | Contents (Phase 0 → later)                                                                                                                                    |
-| ------------ | ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `physics`    | nothing            | yes                | `physicsVersion`, `createRng`, `Fnv64`/`hashFloat64s`, `determinismProbe` → Phase 1: the RK4 sphere-on-ground simulation, impacts, hole, flick, energy ledger |
-| `rules`      | `physics`          | yes                | `rulesVersion` → Phase 2: Ring, Hit and Hole, the lag, stakes and transfers                                                                                   |
-| `ai`         | `physics`, `rules` | yes                | `aiVersion` → Phase 5: six personalities, the ladder                                                                                                          |
-| `protocol`   | `physics`, `rules` | no (platform-free) | `protocolVersion` → shot inputs, challenges, claims                                                                                                           |
-| `marble-gen` | nothing            | `src/genome` only  | `genomeVersion` → Phase 4: genome, descriptions                                                                                                               |
-| `content`    | nothing            | no (platform-free) | `contentSchemaVersion` → Phase 10: courts, series, events as data                                                                                             |
-| `testkit`    | nothing            | no                 | Vitest preset (with the coverage gate), `spreadSeeds`                                                                                                         |
+| Package      | May import         | Determinism lint   | Contents (Phase 0 → later)                                                                                                                                                                                                                      |
+| ------------ | ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `physics`    | nothing            | yes                | Phase 1: `simulateShot` (RK4 with exact events, impacts, held contacts, the hole, edges, the flick, drag, the energy ledger), `buildCourt`, `PARAMS_V1` and `deriveParams`; `@kanche/physics/testing` for suites and tools (ADR-0006, ADR-0007) |
+| `rules`      | `physics`          | yes                | `rulesVersion` → Phase 2: Ring, Hit and Hole, the lag, stakes and transfers                                                                                                                                                                     |
+| `ai`         | `physics`, `rules` | yes                | `aiVersion` → Phase 5: six personalities, the ladder                                                                                                                                                                                            |
+| `protocol`   | `physics`, `rules` | no (platform-free) | `protocolVersion` → shot inputs, challenges, claims                                                                                                                                                                                             |
+| `marble-gen` | nothing            | `src/genome` only  | `genomeVersion` → Phase 4: genome, descriptions                                                                                                                                                                                                 |
+| `content`    | nothing            | no (platform-free) | `contentSchemaVersion` → Phase 10: courts, series, events as data                                                                                                                                                                               |
+| `testkit`    | nothing            | no                 | Vitest preset (with the coverage gate), `spreadSeeds`; data: the golden replays, the pooltool reference values and the KPB dataset                                                                                                              |
 
 Three walls enforce the boundaries:
 
@@ -66,6 +66,7 @@ Three walls enforce the boundaries:
 | Viewport             | `src/viewport.ts`, `src/safe-area.ts`             | 270×480 base, integer-first scaling with the sharp-bilinear fallback, inside the safe area (ADR-0002) |
 | Scene                | `src/scene.ts`, `src/layout.ts`, `src/palette.ts` | The wordless Phase 0 test scene                                                                       |
 | Test hook            | `src/test-hook.ts`                                | `window.__kanche`, non-production builds only                                                         |
+| Physics Lab          | `lab.html`, `src/lab/`                            | Vectors, trails, live values, A/B parameters and a Tracker overlay; dev, debug and e2e builds only    |
 | Native shells        | `android/`, `ios/`                                | Capacitor 8. `MainActivity` enables edge-to-edge.                                                     |
 
 ### Backend (`supabase/`)
@@ -78,22 +79,24 @@ Three walls enforce the boundaries:
 
 ### Tooling (`tools/`)
 
-| Tool                        | Purpose                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `eslint-plugin-kanche`      | Determinism rules, tested both ways, plus a gate test that lints the `Math.sin` fixture with the real config |
-| `determinism`               | Bundles one ESM file and runs it in 5 engines; the hashes must match                                         |
-| `budgets`                   | `budgets.json` checks: initial JS gzip, art, audio, Android download                                         |
-| `scripts/require-checks.sh` | Makes CI jobs required checks (needs a public repo or GitHub Pro)                                            |
+| Tool                        | Purpose                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `eslint-plugin-kanche`      | Determinism rules, tested both ways, plus a gate test that lints the `Math.sin` fixture with the real config             |
+| `determinism`               | Bundles one ESM file and runs it in 5 engines; the hashes must match                                                     |
+| `budgets`                   | `budgets.json` checks: initial JS gzip, art, audio, Android download                                                     |
+| `physics-lab`               | `pnpm lab`: a scenario in; events, the energy ledger and a timeline CSV out                                              |
+| `kpb`                       | The KPB reality suite: dataset format, Tracker import, fits, scorer; the pooltool reference script (Python, never in CI) |
+| `scripts/require-checks.sh` | Makes CI jobs required checks (needs a public repo or GitHub Pro)                                                        |
 
 ## 4. Quality gates in CI
 
 `.github/workflows/ci.yml` runs on every PR and on `main`:
 
-| Job                                 | Runs                                                               |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `verify`                            | Typecheck, lint, unit and Deno tests with coverage, build, budgets |
-| `e2e (chromium / webkit / firefox)` | Playwright in its pinned container                                 |
-| `determinism`                       | The 5-engine harness                                               |
-| `android-debug`                     | Debug APK and its size budget                                      |
+| Job                                 | Runs                                                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `verify`                            | Typecheck, lint, unit and Deno tests with coverage, build, budgets, and the KPB 16 bench (a 60 ms regression ceiling) |
+| `e2e (chromium / webkit / firefox)` | Playwright in its pinned container                                                                                    |
+| `determinism`                       | The 5-engine harness                                                                                                  |
+| `android-debug`                     | Debug APK and its size budget                                                                                         |
 
-`nightly.yml` repeats all of it with 10,000 harness seeds on days `main` changed, and runs `pnpm audit` every night. `ios.yml` builds the iOS app for the simulator on demand (a PR labelled `ios`, or a manual run), because macOS minutes count 10× against the plan.
+`nightly.yml` repeats all of it with 10,000 harness seeds on days `main` changed, runs the KPB suites over 10,000 shots (the `kpb` job), and runs `pnpm audit` every night. `ios.yml` builds the iOS app for the simulator on demand (a PR labelled `ios`, or a manual run), because macOS minutes count 10× against the plan.

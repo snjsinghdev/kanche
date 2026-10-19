@@ -1,0 +1,30 @@
+{
+  "description": "One marble flicked across open cement: it slides, settles into a roll and rolls out to rest.",
+  "court": {
+    "surface": "cement",
+    "bounds": {
+      "xMin": -1,
+      "xMax": 12,
+      "yMin": -2,
+      "yMax": 2
+    }
+  },
+  "marbles": [
+    {
+      "id": 1,
+      "size": "r80",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "shot": {
+    "marbleId": 1,
+    "flick": {
+      "dirX": 1000,
+      "dirY": 0,
+      "fingerSpeed": 300,
+      "spin": 0,
+      "side": 0
+    }
+  }
+}

@@ -12,6 +12,11 @@ The Kanche app: Vite + PixiJS (WebGL), shipped to Android and iOS by Capacitor a
 - **Never write marble ownership.** The client sends shot inputs; the server decides.
 - **The browser floor is pinned** in `vite.config.ts` (`chrome111`, `safari16.4`). Moving it needs an ADR.
 - **The test hook** `window.__kanche` exists only in non-production modes (`e2e`, `debug`, dev).
+- **The Physics Lab** (`lab.html`, `src/lab/`) is a developer page, not game UI, so words are allowed there.
+  - It is built only in non-production modes (`vite.config.ts` lists it as an input outside `production`), and the production bundle stays byte-identical without it.
+  - It imports `@kanche/kpb/tracker` for the Tracker overlay.
+  - It plays a footage file under the court (`#video`), placed by its corners in court metres (`#videoRect`) and shifted in time (`#videoOffset`).
+  - Its hook is `window.__kancheLab`, including `bench(runs)`, which times KPB 16 in whatever browser loads it, a phone's included.
 
 ## Commands
 

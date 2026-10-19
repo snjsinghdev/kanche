@@ -18,6 +18,8 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm budgets",
     "e2e": "pnpm --filter @kanche/client e2e",
     "harness": "pnpm --filter @kanche/determinism harness",
+    "lab": "node tools/physics-lab/src/cli.ts",
+    "kpb": "node tools/kpb/src/cli.ts",
     "dev": "pnpm --filter @kanche/client dev",
     "android:debug": "pnpm --filter @kanche/client android:debug"
   },

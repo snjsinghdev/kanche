@@ -12,6 +12,12 @@ coverage/
 playwright-report/
 test-results/
 tools/determinism/report.json
+# Physics Lab output, written beside each scenario (pnpm lab)
+*.lab/
+
+# Python (tools/kpb/reference only; never in CI)
+__pycache__/
+.venv/
 
 # Env files: only the examples are committed (docs/setup.md)
 .env

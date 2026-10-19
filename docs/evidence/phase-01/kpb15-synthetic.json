@@ -1,0 +1,1112 @@
+{
+  "note": "SYNTHETIC dataset (packages/testkit/kpb/synthetic-v1.json): proves the KPB tools only, says nothing about real marbles. Units: m for positions and roll-outs, s for slide times, degrees for angles, – for ratios and capture.",
+  "scorer": "pass when the RMS per-repeat error <= 1.5 x the filmed repeat scatter (tools/kpb/src/score.ts)",
+  "estimates": [
+    {
+      "name": "Cd",
+      "value": 0.48077,
+      "sigma": 0.16,
+      "recordings": 25
+    },
+    {
+      "name": "cement.muR",
+      "value": 0.0094789,
+      "sigma": 0.00022,
+      "recordings": 10
+    },
+    {
+      "name": "dirt.muR",
+      "value": 0.026952,
+      "sigma": 0.00035,
+      "recordings": 5
+    },
+    {
+      "name": "tile.muR",
+      "value": 0.0068447,
+      "sigma": 0.000095,
+      "recordings": 10
+    },
+    {
+      "name": "cement.muS",
+      "value": 0.31415,
+      "sigma": 0.0049,
+      "recordings": 5
+    },
+    {
+      "name": "dirt.muS",
+      "value": 0.40127,
+      "sigma": 0.0074,
+      "recordings": 5
+    },
+    {
+      "name": "tile.muS",
+      "value": 0.2679,
+      "sigma": 0.003,
+      "recordings": 5
+    },
+    {
+      "name": "glass.e at 0.45 m/s",
+      "value": 0.94466,
+      "sigma": 0.0024,
+      "recordings": 5
+    },
+    {
+      "name": "glass.e at 0.98 m/s",
+      "value": 0.92285,
+      "sigma": 0.0046,
+      "recordings": 5
+    },
+    {
+      "name": "glass.e at 1.98 m/s",
+      "value": 0.90923,
+      "sigma": 0.0045,
+      "recordings": 5
+    },
+    {
+      "name": "glass.mu",
+      "value": 0.063818,
+      "sigma": 0.00081,
+      "recordings": 25
+    },
+    {
+      "name": "edge.e",
+      "value": 0.42006,
+      "sigma": 0.026,
+      "recordings": 15
+    },
+    {
+      "name": "edge.mu",
+      "value": 0.25469,
+      "sigma": 0.0057,
+      "recordings": 15
+    },
+    {
+      "name": "flick.fingerMass",
+      "value": 0.0058483,
+      "sigma": 0.00039,
+      "recordings": 30
+    },
+    {
+      "name": "flick.fingerRestitution",
+      "value": 0.48635,
+      "sigma": 0.063,
+      "recordings": 30
+    }
+  ],
+  "scores": {
+    "truth": [
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.129,
+        "scatter": 0.106,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.128,
+        "scatter": 0.106,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.284,
+        "scatter": 0.652,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.283,
+        "scatter": 0.651,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.142,
+        "scatter": 0.146,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.139,
+        "scatter": 0.146,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.127,
+        "scatter": 0.381,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.123,
+        "scatter": 0.38,
+        "pass": true
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "rest:1",
+        "error": 0.049,
+        "scatter": 0.0347,
+        "pass": true
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "roll-out",
+        "error": 0.0488,
+        "scatter": 0.0343,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.011,
+        "scatter": 0.0447,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.00889,
+        "scatter": 0.045,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.0032,
+        "scatter": 0.00489,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.0193,
+        "scatter": 0.0348,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.00762,
+        "scatter": 0.0352,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.00288,
+        "scatter": 0.00516,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.0365,
+        "scatter": 0.0723,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.0363,
+        "scatter": 0.0728,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "slide-time",
+        "error": 0.00401,
+        "scatter": 0.0043,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:1",
+        "error": 0.00404,
+        "scatter": 0.0142,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:2",
+        "error": 0.00406,
+        "scatter": 0.0129,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.0168,
+        "scatter": 0.0148,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0138,
+        "scatter": 0.0179,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.00552,
+        "scatter": 0.037,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:2",
+        "error": 0.00304,
+        "scatter": 0.0361,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00948,
+        "scatter": 0.0109,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0128,
+        "scatter": 0.0621,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:1",
+        "error": 0.017,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:2",
+        "error": 0.0155,
+        "scatter": 0.0894,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00784,
+        "scatter": 0.00793,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0184,
+        "scatter": 0.0368,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:1",
+        "error": 0.00573,
+        "scatter": 0.0369,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:2",
+        "error": 0.00672,
+        "scatter": 0.0455,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:target",
+        "error": 0.0191,
+        "scatter": 0.0642,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0265,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:target",
+        "error": 1.5,
+        "scatter": 6.92,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:shooter",
+        "error": 2.74,
+        "scatter": 6.06,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:1",
+        "error": 0.0116,
+        "scatter": 0.0366,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:2",
+        "error": 0.0105,
+        "scatter": 0.0231,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:target",
+        "error": 0.0239,
+        "scatter": 0.0557,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0227,
+        "scatter": 0.0588,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:target",
+        "error": 1.09,
+        "scatter": 4.95,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:shooter",
+        "error": 1.14,
+        "scatter": 3.66,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "rest:1",
+        "error": 0.00318,
+        "scatter": 0.0181,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "bank-angle",
+        "error": 0.474,
+        "scatter": 0.936,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 0.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 0.8 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0.447,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 1.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      }
+    ],
+    "fitted": [
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.13,
+        "scatter": 0.106,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.129,
+        "scatter": 0.106,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.284,
+        "scatter": 0.652,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.283,
+        "scatter": 0.651,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.148,
+        "scatter": 0.146,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.145,
+        "scatter": 0.146,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.115,
+        "scatter": 0.381,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.111,
+        "scatter": 0.38,
+        "pass": true
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "rest:1",
+        "error": 0.0385,
+        "scatter": 0.0347,
+        "pass": true
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "roll-out",
+        "error": 0.0382,
+        "scatter": 0.0343,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.0113,
+        "scatter": 0.0447,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.00921,
+        "scatter": 0.045,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.00344,
+        "scatter": 0.00489,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.0194,
+        "scatter": 0.0348,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.00771,
+        "scatter": 0.0352,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.00295,
+        "scatter": 0.00516,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.0432,
+        "scatter": 0.0723,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.0431,
+        "scatter": 0.0728,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "slide-time",
+        "error": 0.00408,
+        "scatter": 0.0043,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:1",
+        "error": 0.00405,
+        "scatter": 0.0142,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:2",
+        "error": 0.00413,
+        "scatter": 0.0129,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.015,
+        "scatter": 0.0148,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0141,
+        "scatter": 0.0179,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.00507,
+        "scatter": 0.037,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:2",
+        "error": 0.00319,
+        "scatter": 0.0361,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00781,
+        "scatter": 0.0109,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0125,
+        "scatter": 0.0621,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:1",
+        "error": 0.017,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:2",
+        "error": 0.014,
+        "scatter": 0.0894,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00622,
+        "scatter": 0.00793,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0185,
+        "scatter": 0.0368,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:1",
+        "error": 0.00512,
+        "scatter": 0.0369,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:2",
+        "error": 0.0066,
+        "scatter": 0.0455,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:target",
+        "error": 0.0206,
+        "scatter": 0.0642,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0266,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:target",
+        "error": 1.48,
+        "scatter": 6.92,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:shooter",
+        "error": 2.78,
+        "scatter": 6.06,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:1",
+        "error": 0.0118,
+        "scatter": 0.0366,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:2",
+        "error": 0.0106,
+        "scatter": 0.0231,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:target",
+        "error": 0.0239,
+        "scatter": 0.0557,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0228,
+        "scatter": 0.0588,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:target",
+        "error": 1.12,
+        "scatter": 4.95,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:shooter",
+        "error": 1.21,
+        "scatter": 3.66,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "rest:1",
+        "error": 0.0029,
+        "scatter": 0.0181,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "bank-angle",
+        "error": 0.559,
+        "scatter": 0.936,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 0.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 0.8 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0.447,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 1.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      }
+    ],
+    "v1": [
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.366,
+        "scatter": 0.106,
+        "pass": false
+      },
+      {
+        "condition": "roll cement 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.366,
+        "scatter": 0.106,
+        "pass": false
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.85,
+        "scatter": 0.652,
+        "pass": true
+      },
+      {
+        "condition": "roll cement 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.849,
+        "scatter": 0.651,
+        "pass": true
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "rest:1",
+        "error": 0.315,
+        "scatter": 0.146,
+        "pass": false
+      },
+      {
+        "condition": "roll tile 0.6 m/s",
+        "metric": "roll-out",
+        "error": 0.313,
+        "scatter": 0.146,
+        "pass": false
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.822,
+        "scatter": 0.381,
+        "pass": false
+      },
+      {
+        "condition": "roll tile 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.821,
+        "scatter": 0.38,
+        "pass": false
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "rest:1",
+        "error": 0.114,
+        "scatter": 0.0347,
+        "pass": false
+      },
+      {
+        "condition": "roll dirt 0.8 m/s",
+        "metric": "roll-out",
+        "error": 0.114,
+        "scatter": 0.0343,
+        "pass": false
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.0196,
+        "scatter": 0.0447,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.0185,
+        "scatter": 0.045,
+        "pass": true
+      },
+      {
+        "condition": "stun cement 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.00984,
+        "scatter": 0.00489,
+        "pass": false
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "rest:1",
+        "error": 0.021,
+        "scatter": 0.0348,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "roll-out",
+        "error": 0.011,
+        "scatter": 0.0352,
+        "pass": true
+      },
+      {
+        "condition": "stun tile 1.2 m/s",
+        "metric": "slide-time",
+        "error": 0.0102,
+        "scatter": 0.00516,
+        "pass": false
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.0834,
+        "scatter": 0.0723,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "roll-out",
+        "error": 0.0833,
+        "scatter": 0.0728,
+        "pass": true
+      },
+      {
+        "condition": "stun dirt 1.0 m/s",
+        "metric": "slide-time",
+        "error": 0.00647,
+        "scatter": 0.0043,
+        "pass": false
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:1",
+        "error": 0.00433,
+        "scatter": 0.0142,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "rest:2",
+        "error": 0.00525,
+        "scatter": 0.0129,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.0395,
+        "scatter": 0.0148,
+        "pass": false
+      },
+      {
+        "condition": "head-on cement 0.5 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0134,
+        "scatter": 0.0179,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:1",
+        "error": 0.00831,
+        "scatter": 0.037,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "rest:2",
+        "error": 0.0036,
+        "scatter": 0.0361,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00632,
+        "scatter": 0.0109,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 1.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0137,
+        "scatter": 0.0621,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:1",
+        "error": 0.0272,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "rest:2",
+        "error": 0.0149,
+        "scatter": 0.0894,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:target",
+        "error": 0.00648,
+        "scatter": 0.00793,
+        "pass": true
+      },
+      {
+        "condition": "head-on cement 2.0 m/s",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0173,
+        "scatter": 0.0368,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:1",
+        "error": 0.00361,
+        "scatter": 0.0369,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "rest:2",
+        "error": 0.00873,
+        "scatter": 0.0455,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:target",
+        "error": 0.0234,
+        "scatter": 0.0642,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0274,
+        "scatter": 0.102,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:target",
+        "error": 1.77,
+        "scatter": 6.92,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 30°",
+        "metric": "departure:shooter",
+        "error": 2.69,
+        "scatter": 6.06,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:1",
+        "error": 0.0144,
+        "scatter": 0.0366,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "rest:2",
+        "error": 0.00949,
+        "scatter": 0.0231,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:target",
+        "error": 0.035,
+        "scatter": 0.0557,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "speed-ratio:shooter",
+        "error": 0.0211,
+        "scatter": 0.0588,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:target",
+        "error": 0.846,
+        "scatter": 4.95,
+        "pass": true
+      },
+      {
+        "condition": "cut cement 45°",
+        "metric": "departure:shooter",
+        "error": 1.51,
+        "scatter": 3.66,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "rest:1",
+        "error": 0.00676,
+        "scatter": 0.0181,
+        "pass": true
+      },
+      {
+        "condition": "bank tile 45°",
+        "metric": "bank-angle",
+        "error": 1.97,
+        "scatter": 0.936,
+        "pass": false
+      },
+      {
+        "condition": "hole dirt offset 0.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 0.8 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0.447,
+        "pass": true
+      },
+      {
+        "condition": "hole dirt offset 1.0 1.0 m/s",
+        "metric": "capture",
+        "error": 0,
+        "scatter": 0,
+        "pass": true
+      }
+    ]
+  }
+}

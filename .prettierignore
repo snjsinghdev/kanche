@@ -11,3 +11,5 @@ apps/client/ios/
 docs/prompt-pack/
 supabase/.temp/
 supabase/.branches/
+packages/testkit/golden/
+packages/testkit/kpb/*.json

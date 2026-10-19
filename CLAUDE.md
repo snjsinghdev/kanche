@@ -2,7 +2,7 @@
 
 Kanche is a mobile-first, pixel-art street-marbles game played "for keeps". Its marbles are unique, carry their history, and change hands only through play. One TypeScript codebase ships to Android and iOS through Capacitor and to the web, so a WhatsApp link can play in the browser. A deterministic physics core is shared by the app, the AI kids and the Supabase server, so a shot resolves the same way everywhere.
 
-The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prompts/`, and the physics benchmark it must pass is in `docs/prompt-pack/MECHANICS-REVIEW.md`. Phase 0 (foundations) is done. Read the latest `docs/handoff/phase-NN.md` before starting a phase.
+The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prompts/`, and the physics benchmark it must pass is in `docs/prompt-pack/MECHANICS-REVIEW.md`. Phases 0 (foundations) and 1 (physics core) are built. Before starting a phase, read the latest `docs/handoff/phase-NN.md` and `docs/gates.md`: a phase starts only when the previous phase's exit gates pass.
 
 ## Non-negotiables
 
@@ -23,21 +23,23 @@ The game is built in 12 phases. Each phase's prompt is in `docs/prompt-pack/prom
 
 ## Repository map
 
-| Path                         | What                                                                                      | Rules                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------- |
-| `packages/physics`           | Deterministic simulation core, seeded RNG, state hash                                     | `packages/physics/CLAUDE.md`       |
-| `packages/rules`             | Ring, Hit and Hole; turns, the lag, stakes                                                | `packages/rules/CLAUDE.md`         |
-| `packages/ai`                | The neighbourhood kids (physics-search AI)                                                | `packages/ai/CLAUDE.md`            |
-| `packages/marble-gen`        | Marble genomes (`src/genome` is simulation code)                                          | determinism lint on `src/genome`   |
-| `packages/protocol`          | Wire formats: shot inputs, challenges, claims                                             | platform-free                      |
-| `packages/content`           | Courts, marble series and events as data                                                  | platform-free                      |
-| `packages/testkit`           | Vitest preset and test helpers                                                            | imports no other `@kanche` package |
-| `apps/client`                | Vite + PixiJS app, Capacitor `android/` and `ios/`                                        | `apps/client/CLAUDE.md`            |
-| `supabase`                   | Migrations, Edge Functions (Deno), DB tests                                               | `supabase/CLAUDE.md`               |
-| `tools/eslint-plugin-kanche` | The determinism lint and its tests                                                        |                                    |
-| `tools/determinism`          | Cross-engine harness (Node, Deno, Chromium, WebKit, Firefox)                              |                                    |
-| `tools/budgets`              | Budget checker for `budgets.json`                                                         |                                    |
-| `docs`                       | `ARCHITECTURE.md`, `qualities.md`, `setup.md`, `adr/`, `phases/`, `handoff/`, `evidence/` |                                    |
+| Path                         | What                                                                                                                                                    | Rules                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `packages/physics`           | Deterministic simulation core, seeded RNG, state hash                                                                                                   | `packages/physics/CLAUDE.md`       |
+| `packages/rules`             | Ring, Hit and Hole; turns, the lag, stakes                                                                                                              | `packages/rules/CLAUDE.md`         |
+| `packages/ai`                | The neighbourhood kids (physics-search AI)                                                                                                              | `packages/ai/CLAUDE.md`            |
+| `packages/marble-gen`        | Marble genomes (`src/genome` is simulation code)                                                                                                        | determinism lint on `src/genome`   |
+| `packages/protocol`          | Wire formats: shot inputs, challenges, claims                                                                                                           | platform-free                      |
+| `packages/content`           | Courts, marble series and events as data                                                                                                                | platform-free                      |
+| `packages/testkit`           | Vitest preset, test helpers, and data: golden replays (`golden/`) and the KPB dataset (`kpb/`)                                                          | imports no other `@kanche` package |
+| `apps/client`                | Vite + PixiJS app, Capacitor `android/` and `ios/`                                                                                                      | `apps/client/CLAUDE.md`            |
+| `supabase`                   | Migrations, Edge Functions (Deno), DB tests                                                                                                             | `supabase/CLAUDE.md`               |
+| `tools/eslint-plugin-kanche` | The determinism lint and its tests                                                                                                                      |                                    |
+| `tools/determinism`          | Cross-engine harness (Node, Deno, Chromium, WebKit, Firefox)                                                                                            |                                    |
+| `tools/budgets`              | Budget checker for `budgets.json`                                                                                                                       |                                    |
+| `tools/physics-lab`          | Physics Lab CLI: a scenario in; events, ledger and a timeline CSV out                                                                                   |                                    |
+| `tools/kpb`                  | KPB reality suite: dataset, Tracker import, fits, scorer; the pooltool reference (Python)                                                               | Python never runs in CI            |
+| `docs`                       | `ARCHITECTURE.md`, `qualities.md`, `setup.md`, `gates.md`, `physics.md`, `physics-calibration.md`, `kpb.md`, `adr/`, `phases/`, `handoff/`, `evidence/` |                                    |
 
 The package dependency direction is `physics ← rules ← ai`, with `protocol` allowed to import `physics` and `rules`. No core package imports DOM, Node built-ins, PixiJS, Capacitor, Supabase or app code. Each core package's `tsconfig.lib.json` has no DOM or Node types, so a violation is a type error as well as a lint error.
 
@@ -45,20 +47,24 @@ The package dependency direction is `physics ← rules ← ai`, with `protocol` 
 
 Set up the machine with `docs/setup.md` first (Node 24.22.0, pnpm via corepack, Deno 2.9.7, the Playwright browsers, JDK 21 and the Android SDK).
 
-| Command                          | Does                                                                                                        |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `pnpm install`                   | Install (exact pins; no version younger than 7 days)                                                        |
-| `pnpm verify`                    | typecheck → lint → test → build → budgets. **Must pass before every commit.**                               |
-| `pnpm typecheck`                 | `tsc -b` over every project                                                                                 |
-| `pnpm lint`                      | ESLint (typed, plus the determinism and boundary rules) and Prettier check                                  |
-| `pnpm test`                      | Vitest in every package (coverage gate 90% on physics, rules, ai) and Deno tests for `supabase/functions`   |
-| `pnpm build`                     | Web build (`apps/client/dist`) and the harness bundle                                                       |
-| `pnpm budgets [--android <apk>]` | Checks the build against `budgets.json`                                                                     |
-| `pnpm e2e`                       | Playwright on Chromium, WebKit and Firefox                                                                  |
-| `pnpm harness`                   | Cross-engine determinism: identical hashes in 5 engines (`KANCHE_HARNESS_SEEDS=10000` for the nightly size) |
-| `pnpm dev`                       | Vite dev server                                                                                             |
-| `pnpm android:debug`             | Debug APK at `apps/client/android/app/build/outputs/apk/debug/app-debug.apk`                                |
-| `pnpm format`                    | Prettier write                                                                                              |
+| Command                                  | Does                                                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pnpm install`                           | Install (exact pins; no version younger than 7 days)                                                         |
+| `pnpm verify`                            | typecheck → lint → test → build → budgets. **Must pass before every commit.**                                |
+| `pnpm typecheck`                         | `tsc -b` over every project                                                                                  |
+| `pnpm lint`                              | ESLint (typed, plus the determinism and boundary rules) and Prettier check                                   |
+| `pnpm test`                              | Vitest in every package (coverage gate 90% on physics, rules, ai) and Deno tests for `supabase/functions`    |
+| `pnpm build`                             | Web build (`apps/client/dist`) and the harness bundle                                                        |
+| `pnpm budgets [--android <apk>]`         | Checks the build against `budgets.json`                                                                      |
+| `pnpm e2e`                               | Playwright on Chromium, WebKit and Firefox                                                                   |
+| `pnpm harness`                           | Cross-engine determinism: identical hashes in 5 engines (`KANCHE_HARNESS_SEEDS=10000` for the nightly size)  |
+| `pnpm dev`                               | Vite dev server                                                                                              |
+| `pnpm android:debug`                     | Debug APK at `apps/client/android/app/build/outputs/apk/debug/app-debug.apk`                                 |
+| `pnpm lab <scenario.json>`               | Physics Lab CLI (`tools/physics-lab`); `apps/client/lab.html` is the visual lab in dev, debug and e2e builds |
+| `pnpm kpb import\|fit\|score\|synthetic` | KPB reality-suite tools (`docs/physics-calibration.md`)                                                      |
+| `pnpm --filter @kanche/physics bench`    | Times the KPB 16 break without coverage (`--max <ms>` is CI's regression ceiling)                            |
+| `pnpm --filter @kanche/physics goldens`  | Rewrites the golden replays (with a `physicsVersion` bump only, once v1 has shipped)                         |
+| `pnpm format`                            | Prettier write                                                                                               |
 
 ## Workflow
 

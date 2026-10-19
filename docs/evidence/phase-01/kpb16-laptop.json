@@ -1,0 +1,26 @@
+{
+  "test": "KPB 16: a 16-marble break",
+  "physicsVersion": 1,
+  "passMark": {
+    "ci": "≤ 5 ms",
+    "lowEndPhone": "≤ 20 ms"
+  },
+  "median": 25.035079999999653,
+  "min": 21.10386799999833,
+  "p90": 32.49334099999942,
+  "runs": 300,
+  "unit": "ms",
+  "work": {
+    "duration": 4.656630182211602,
+    "events": 160,
+    "steps": 1118,
+    "substeps": 6182,
+    "impacts": 76
+  },
+  "hash": "b2396155f54ebc61",
+  "machine": {
+    "node": "v24.22.0",
+    "cpu": "Intel(R) Core(TM) i7-5600U CPU @ 2.60GHz",
+    "platform": "linux x64"
+  }
+}

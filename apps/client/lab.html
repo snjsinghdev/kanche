@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kanche Physics Lab</title>
+    <link rel="stylesheet" href="/src/lab/lab.css" />
+  </head>
+  <body>
+    <main class="lab">
+      <canvas id="view" aria-label="Simulation view"></canvas>
+      <aside>
+        <h1>Physics Lab</h1>
+        <p class="note">
+          Dev, debug and e2e builds only; never in the game. Wheel to zoom, drag to pan.
+        </p>
+        <label
+          >Scenario
+          <select id="scenario"></select
+        ></label>
+        <label>Setup (JSON)<textarea id="setup" rows="8" spellcheck="false"></textarea></label>
+        <label
+          >B: overrides of v1 (JSON; empty for no B)<textarea
+            id="overrides"
+            rows="3"
+            spellcheck="false"
+          ></textarea>
+        </label>
+        <div class="row">
+          <button id="run" type="button">Run</button>
+          <button id="play" type="button">Play</button>
+          <input id="time" type="range" min="0" max="1000" value="0" aria-label="Time" />
+        </div>
+        <label
+          >Overlay a Tracker export (t, x, y in metres)
+          <input id="overlay" type="file" accept=".csv,.txt,text/csv,text/plain" />
+        </label>
+        <label
+          >Overlay the footage (overhead video)
+          <input id="video" type="file" accept="video/*" />
+        </label>
+        <div class="row">
+          <label
+            >Frame covers x0,y0,x1,y1 (m)
+            <input id="videoRect" type="text" value="-0.5,-0.5,0.5,0.5" spellcheck="false" />
+          </label>
+          <label
+            >Video time at the shot's start (s)
+            <input id="videoOffset" type="number" value="0" step="0.001" />
+          </label>
+        </div>
+        <p id="error" class="error" role="alert"></p>
+        <table id="values"></table>
+        <p class="legend">
+          <span class="a">A: v1</span> <span class="b">B: overrides</span>
+          <span class="v">velocity</span> <span class="u">slip</span> <span class="w">spin</span>
+          <span class="o">tracked</span> footage under everything
+        </p>
+      </aside>
+    </main>
+    <script type="module" src="/src/lab/main.ts"></script>
+  </body>
+</html>
