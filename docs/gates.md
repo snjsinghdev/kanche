@@ -22,7 +22,7 @@ Ten tests that each phase must pass before the next one starts. They come from t
 | Phase                       | Must pass before the next phase starts                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | 0 · Foundations             | 9 (pass marks written), 3 (legal questions sent), 6 (reference phone chosen, stack locked), 5 (phase durations planned) |
-| 1 · Physics core            | 6 (a 16-marble break in 20 ms or less on the reference phone), 5                                                        |
+| 1 · Physics core            | 6 (a 16-marble break's full outcome within 100 ms of release on the reference phone; was 20 ms, see the log), 5         |
 | 2 · Rules and modes         | 5 (re-plan from the real pace), 7 (rules match the street game), 6                                                      |
 | 3 · Engine and feel         | 1 (the fun test), 9, 6, 5                                                                                               |
 | 4 · Marbles and the jar     | 6, 5                                                                                                                    |
@@ -51,13 +51,13 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
 
 **Gate 6, technology: a 16-marble break in 20 ms or less on the reference budget phone, with the stack unchanged.**
 
-| Check                    | Result                                                                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stack unchanged          | ✅ No engine or backend change. No new runtime dependency: pooltool is vendored Python that never runs in CI (ADR-0007)                                                                                                   |
-| The break on a phone     | ❌ **29.6 ms median** (24.3 fastest, 31.2 p90, 100 runs) on the owner's OnePlus CPH2467: Snapdragon 695, Android 15, Chrome 155. That is a **mid-range** phone, so a budget phone will be slower. Its hash matches Node's |
-| The break on CI hardware | 25.0 ms median on an i7-5600U, against KPB 16's 5 ms. CI's own number is in the `kpb16` artifact of each run                                                                                                              |
-| Verdict                  | **FAILED.** By the gate rule, Phase 2 waits until the break is fast enough on the reference phone, or the scope is cut. `handoff/phase-01.md` sets out the options for the owner                                          |
-| Owner's decision         | 2026-10-18: optimise further (the handoff's option 1, which was recommended). The owner has no reference budget phone yet, so the gate can't be measured on one and stays open until it is                                |
+| Check                    | Result                                                                                                                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack unchanged          | ✅ No engine or backend change. No new runtime dependency: pooltool is vendored Python that never runs in CI (ADR-0007)                                                                                                             |
+| The break on a phone     | ❌ **29.6 ms median** (24.3 fastest, 31.2 p90, 100 runs) on the owner's OnePlus CPH2467: Snapdragon 695, Android 15, Chrome 155. That is a **mid-range** phone, so a budget phone will be slower. Its hash matches Node's           |
+| The break on CI hardware | 25.0 ms median on an i7-5600U, against KPB 16's 5 ms. CI's own number is in the `kpb16` artifact of each run                                                                                                                        |
+| Verdict                  | **FAILED against the original 20 ms.** By the gate rule, Phase 2 waits until the break is fast enough on the reference phone, or the scope is cut. The owner later changed the pass mark (below), and the gate is **open** under it |
+| Owner's decision         | 2026-10-18: optimise further (the handoff's option 1, which was recommended). The owner has no reference budget phone yet, so the gate can't be measured on one and stays open until it is                                          |
 
 **A proxy target while there is no reference phone** (written 2026-10-18, before the optimisation). It steers the work; it is not the gate, which is still decided on the reference phone.
 
@@ -85,6 +85,27 @@ Phase 0 merged (PR #1) before this gates list reached the repository, so none of
 - On the laptop that is about 19 ms (25.0 ÷ 1.31), against the 6.9 ms proxy. The OnePlus has not been re-measured: it was not attached.
 - **The changes that keep results identical are used up.** What remains is spread thinly across the engine, and the two levers the handoff named are smaller than it estimated: probe reuse is worth about 3%, and the derivative at a substep's end is already reused as the next one's first stage.
 - Going further means changing results: a restructured hot path (typed arrays), frozen directions kept across steps, fewer impact steps. That is a different integrator from the one ADR-0006 describes, so it goes back to the owner (`handoff/phase-01.md`).
+
+**The pass mark changes (2026-10-19).**
+
+- **The owner's decision.** The recommendation was option 2: the break doesn't have to finish within a frame, only to stay ahead of playback, so the gate should judge the shot's whole outcome against a new pass mark written before anything is measured against it. The example given was "a break's full outcome within 100 ms of release on the reference phone". The owner replied "go with recomendations".
+- **Why 20 ms was the wrong measure.** A break is 4.66 s of play in 1,118 steps.
+  - At about 55 ms on a budget phone, the estimate for today's code, it simulates about 85× faster than real time.
+  - The renderer can play the timeline while the rest is simulated, at about 0.2 ms of simulation per 60 fps frame.
+  - The neighbourhood kids' AI, which runs many shots per decision, is what needs raw speed. Phase 5 writes its own budget.
+- **Gate 9.** This pass mark was written after the OnePlus had been measured against the old one, which is what Gate 9 exists to prevent. It stands because the owner decided it explicitly, and it is written before the reference phone, the device that decides the gate, is measured.
+
+**Gate 6, technology, from 2026-10-19: a 16-marble break's full outcome within 100 ms of release on the reference budget phone, with the stack unchanged.**
+
+- **How it is measured:** KPB 16's break (`breakShot()`), in Chrome on the reference phone through the lab page's bench hook, with 100 warm runs after the warm-up. It passes when the **90th percentile is 100 ms or less**. The first, cold run is recorded beside it but not judged.
+- **The proxy,** scaled as above by the T606's 2.4×:
+  - about **41 ms** on the OnePlus (40–42 across the score ranges);
+  - about **35 ms** on the i7-5600U laptop.
+- **Where it stands:** met by the proxy, not yet by the gate.
+  - The OnePlus measured 31.2 ms at the 90th percentile before the optimisation.
+  - The laptop is about 19 ms after it.
+  - Both clear the proxy with room, but **Gate 6 stays open** until a reference phone is chosen and measured. A proxy is never claimed as the gate.
+- **KPB 16 is unchanged.** Its own marks (5 ms on CI, 20 ms on a low-end phone) belong to the physics benchmark, not to this gate. They stay recorded as open, with the numbers reached (`kpb.md`).
 
 **Gate 5, scope: log planned versus actual time and every design change; if this phase ran more than 50% over plan, log the matching cut.**
 

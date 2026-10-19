@@ -4,6 +4,8 @@
 
 ## Read this first: Gate 6 failed, and Phase 2 waits on the owner
 
+> **Update, 2026-10-19.** The owner chose to optimise first, and the changes that keep results identical made the break 1.31× faster, short of what 20 ms on a budget phone needs. The owner then chose option 2 below: Gate 6 for this phase is now **a break's full outcome within 100 ms of release on the reference phone** (90th percentile of 100 warm runs). By the proxy in `docs/gates.md` that is met with room, but the gate stays **open** until a reference phone is chosen and measured. The rest of this section is the original account.
+
 The updated prompt pack, exported into the repository root during this phase, gives Phase 1 two exit gates. Under the gate rule, Phase 2 starts only when both pass.
 
 **Gate 6 failed.** A 16-marble break must simulate in 20 ms or less on the reference budget phone.
@@ -114,7 +116,7 @@ None of this changes an outcome: the goldens, the harness hashes and the break's
 | Golden replays committed                                                                                                                                                  | ✅ 200, identical in five engines                                                                                                                                                                                                                                                                                                                                |
 | This handoff records performance numbers, KPB scores and open questions                                                                                                   | ✅                                                                                                                                                                                                                                                                                                                                                               |
 | PR "Phase 01 — Physics core" reviewed                                                                                                                                     | [PR #2](https://github.com/snjsinghdev/kanche/pull/2) is a **draft** while Gate 6 fails. CodeRabbit's eleven comments are fixed in the retrofit                                                                                                                                                                                                                  |
-| **Exit gate 6** (break ≤ 20 ms on the reference phone, stack unchanged)                                                                                                   | ❌ **Failed**: 29.6 ms on a mid-range phone. Stack unchanged                                                                                                                                                                                                                                                                                                     |
+| **Exit gate 6** (since 2026-10-19: the break's full outcome within 100 ms of release on the reference phone, stack unchanged; was 20 ms)                                  | **Open.** Failed the original 20 ms (29.6 ms on a mid-range phone). Under the new mark the proxy is met (about 41 ms on the OnePlus, 35 ms on the laptop), but no reference phone exists to measure. Stack unchanged                                                                                                                                             |
 | **Exit gate 5** (planned vs actual, design changes)                                                                                                                       | Logged in `docs/gates.md`; **can't be measured**, because there is no plan duration                                                                                                                                                                                                                                                                              |
 
 ## KPB v1 scores (physicsVersion 1)
@@ -161,9 +163,11 @@ These are also logged under Gate 5 in `docs/gates.md`:
 
 ## Open issues
 
-1. **Gate 6 and KPB 16** (above). On 2026-10-18 the owner chose to optimise further (option 1). There is no reference budget phone yet, so Gate 6 stays open until one is chosen and measured.
-   - **Result so far:** 1.31× with identical results, against the 3.6× the proxy needs (`docs/gates.md`). The estimate of 2–4× in option 1 was too optimistic: two of its levers turned out small or already in place.
-   - **Back with the owner:** a results-changing rewrite of uncertain yield, or option 2 (measure the shot's outcome against playback rather than a fixed 20 ms), written as a new pass mark before anything is measured against it (Gate 9).
+1. **Gate 6 and KPB 16** (above).
+   - On 2026-10-18 the owner chose to optimise further (option 1). The changes that keep results identical gave 1.31×, against the 3.6× the proxy needed. The estimate of 2–4× was too optimistic: two of its levers turned out small or already in place.
+   - On 2026-10-19 the owner chose option 2. The pass mark is now a break's full outcome within 100 ms of release on the reference phone (`docs/gates.md`).
+   - **Still open:** there is no reference budget phone yet, so Gate 6 can't be measured on one. The proxy (about 41 ms on the OnePlus, 35 ms on the laptop) is met by the numbers so far. KPB 16's own marks stay open as recorded.
+   - **To do when the phone exists:** run the lab's bench hook on it (`bench(100)`), and log the 90th percentile and the cold first run.
 2. **KPB 14:**
    - Report pooltool's ball–table slip sign error upstream (github.com/ekiefl/pooltool). That is an outward action for the owner.
    - Decide whether head-on returns should follow Mathavan (no vertical velocity) or Kanche's model. Kanche's is the more physical, so the reference would need a documented exception.
@@ -195,5 +199,6 @@ These are also logged under Gate 5 in `docs/gates.md`:
 - **Inputs are integers.** A flick is `{ dirX, dirY, fingerSpeed, spin, side }`, validated by `validateFlick`. For angle inputs such as the lag's start points, use `unitVector(index)`, a committed table of 1,024 directions.
 - **Courts are `CourtSpec` data.** Phase 2's ring, line and hole layouts are courts with walls, blocks (steps and curbs) and a hole, built by `buildCourt` once and reused across shots.
 - **Pass the frozen `PARAMS_V1`** in anything that decides a match. `deriveParams` is for tests and tools only.
-- **Cost.** A shot is about 3 ms on average on the laptop (1,000 random shots), and a full break about 25 ms. The rules' search for a lag winner, and the AI later, should budget for that.
+- **Cost.** A shot is about 3 ms on average on the laptop (1,000 random shots), and a full break about 19 ms since the first optimisation. The rules' search for a lag winner should budget for that.
+- **For Phase 5 (the neighbourhood kids):** the AI simulates many shots per decision, so it is what needs raw simulation speed. Write its budget (shots per decision, time per decision on the reference phone) before building it. The levers that change results (typed arrays, frozen directions across steps, fewer impact steps) are listed in `docs/gates.md` under Gate 6, and need a new `physicsVersion` once v1 has shipped.
 - **Determinism.** The rules package inherits the determinism lint. Never sort without a comparator, never use floats from outside the simulation as inputs, and bump `rulesVersion` with any outcome change (ADR-0004).
